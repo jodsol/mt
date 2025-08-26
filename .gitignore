@@ -1,4 +1,6 @@
 # directories
 [Bb]in/
 [Bb]uild/
+.vscode/
+
 
