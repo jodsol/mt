@@ -1,0 +1,21 @@
+BasedOnStyle: llvm
+NamespaceIndentation: None
+IndentPPDirectives: None
+AccessModifierOffset: -4
+IndentWidth: 4
+TabWidth: 4
+SortIncludes: false
+#AllowShortDeclarationsOnASingleLine: false
+BreakBeforeBraces: Allman
+# BreakBeforeDefinitionKeywords: [class, struct, union, enum]
+# PenaltyBreakTemplateDeclaration: 0
+AlwaysBreakTemplateDeclarations: Yes
+
+AlignAfterOpenBracket: Align
+ColumnLimit: 0
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: true
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
