@@ -34,13 +34,23 @@ Application::Application(int args, char* argv[], int cx, int cy)
         x, y, cx, cy, nullptr,
         0, wc.hInstance, nullptr);
 
-    assert(m_hwnd && "failed to create window");
+    assert(m_hwnd && L"failed to create window");
 
+    // m_context = new vk_context()
     ::ShowWindow(m_hwnd, SW_SHOW);
 }
 
 LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
+    switch (msg)
+    {
+    case WM_SIZE:
+
+        break;
+
+    default:
+        break;
+    }
     return ::DefWindowProc(hwnd, msg, wp, lp);
 }
 
@@ -59,7 +69,6 @@ int Application::exec(void* scene)
 
         // render
     }
-
     return 0;
 }
 

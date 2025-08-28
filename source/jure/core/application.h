@@ -11,6 +11,8 @@ public:
 
     int exec(void* scene);
 
+    /// context/swapchain
+
 private:
     HWND m_hwnd;
 };
