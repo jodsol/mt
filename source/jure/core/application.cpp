@@ -1,5 +1,6 @@
 #include "application.h"
 #include "win32_config.h"
+#include "logger.h"
 
 namespace jure
 {
@@ -38,6 +39,8 @@ Application::Application(int args, char* argv[], int cx, int cy)
 
     // m_context = new vk_context()
     ::ShowWindow(m_hwnd, SW_SHOW);
+
+    log_info("%s window created", wc.lpszClassName);
 }
 
 LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
@@ -61,6 +64,11 @@ int Application::exec(void* scene)
     {
         while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
+            // FIXME : 임시 처리 추후 이벤트로 종료
+            if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
+            {
+                PostQuitMessage(0);
+            }
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
         }
