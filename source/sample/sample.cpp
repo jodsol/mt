@@ -1,8 +1,8 @@
-#include <core/application.h>
+#include <juce/core/application.h>
 
 int main(int args, char* argv[])
 {
-    jure::Application app(args, argv, 1024, 760);
+    juce::Application app(args, argv, 1024, 760);
 
     auto code = app.exec(nullptr);
 

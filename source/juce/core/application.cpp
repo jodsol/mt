@@ -2,7 +2,7 @@
 #include "win32_config.h"
 #include "logger.h"
 
-namespace jure
+namespace juce
 {
 
 LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -80,4 +80,4 @@ int Application::exec(void* scene)
     return 0;
 }
 
-} // namespace jure
+} // namespace juce
