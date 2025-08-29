@@ -2,7 +2,7 @@
 
 #include "typedef.h"
 
-namespace jure
+namespace juce
 {
 class Application
 {
@@ -16,4 +16,4 @@ public:
 private:
     HWND m_hwnd;
 };
-} // namespace jure
+} // namespace juce
