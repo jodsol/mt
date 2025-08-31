@@ -2,12 +2,15 @@
 #include "win32_config.h"
 #include "logger.h"
 
-namespace juce
+namespace juce 
 {
 
 LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
-Application::Application(int args, char* argv[], int cx, int cy)
+Application::Application(int args, char* argv[], int cx, int cy) 
+    : m_hwnd(nullptr)
+    , m_context(nullptr)
+    , m_swapchain(nullptr)
 {
     WNDCLASSEXA wc{};
     wc.cbSize = sizeof(WNDCLASSEXA);
@@ -19,7 +22,7 @@ Application::Application(int args, char* argv[], int cx, int cy)
     wc.hIcon = 0;
     wc.lpszClassName = "Jure Engine";
 
-    if (!::RegisterClassExA(&wc))
+    if (!::RegisterClassExA(&wc)) 
     {
         assert(0 && "failed to registered class");
     }
@@ -37,36 +40,63 @@ Application::Application(int args, char* argv[], int cx, int cy)
 
     assert(m_hwnd && L"failed to create window");
 
-    // m_context = new vk_context()
-    ::ShowWindow(m_hwnd, SW_SHOW);
+    // Vulkan 초기화
+    m_context = new VkContext();
+    if (!m_context->initialize(m_hwnd, wc.hInstance)) {
+        log_error("Failed to initialize Vulkan context");
+        delete m_context;
+        m_context = nullptr;
+        return;
+    }
 
-    log_info("%s window created", wc.lpszClassName);
+    m_swapchain = new Swapchain();
+    if (!m_swapchain->initialize(m_context, cx, cy)) {
+        log_error("Failed to initialize swapchain");
+        delete m_swapchain;
+        m_swapchain = nullptr;
+        delete m_context;
+        m_context = nullptr;
+        return;
+    }
+
+    ::ShowWindow(m_hwnd, SW_SHOW);
+    log_info("%s window created with Vulkan", wc.lpszClassName);
 }
 
-LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
-{
-    switch (msg)
-    {
-    case WM_SIZE:
+Application::~Application() {
+    if (m_swapchain) {
+        delete m_swapchain;
+        m_swapchain = nullptr;
+    }
+    
+    if (m_context) {
+        delete m_context;
+        m_context = nullptr;
+    }
+}
 
+LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    switch (msg) {
+    case WM_SIZE: {
+        // 윈도우 크기 변경 시 스왑체인 재생성 필요
+        // 실제 구현에서는 Application 인스턴스에 접근해서 스왑체인을 재생성해야 함
         break;
-
+    }
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
     default:
         break;
     }
     return ::DefWindowProc(hwnd, msg, wp, lp);
 }
 
-int Application::exec(void* scene)
-{
+int Application::exec(void* scene) {
     MSG msg{};
-    while (msg.message != WM_QUIT)
-    {
-        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-        {
+    while (msg.message != WM_QUIT) {
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
             // FIXME : 임시 처리 추후 이벤트로 종료
-            if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
-            {
+            if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
                 PostQuitMessage(0);
             }
             ::TranslateMessage(&msg);
@@ -74,10 +104,39 @@ int Application::exec(void* scene)
         }
 
         // update
-
+        update();
+        
         // render
+        render();
     }
     return 0;
+}
+
+void Application::update() {
+    // 게임 로직 업데이트
+}
+
+void Application::render() {
+    if (!m_context || !m_swapchain) {
+        return;
+    }
+
+    // 간단한 렌더링 루프
+    // 실제로는 여기서 커맨드 버퍼를 기록하고 제출해야 함
+    
+    // 현재는 빈 구현
+}
+
+VkContext* Application::get_context() const {
+    return m_context;
+}
+
+Swapchain* Application::get_swapchain() const {
+    return m_swapchain;
+}
+
+HWND Application::get_hwnd() const {
+    return m_hwnd;
 }
 
 } // namespace juce

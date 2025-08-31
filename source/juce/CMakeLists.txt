@@ -1,3 +1,10 @@
+# Vulkan SDK 경로 가져오기
+set(VULKAN_SDK $ENV{VULKAN_SDK})
+
+if (NOT VULKAN_SDK)
+    message(FATAL_ERROR "VULKAN_SDK environment variable not set. Please install Vulkan SDK.")
+endif()
+
 
 file(GLOB_RECURSE srcs
     "{CMAKE_CURRENT_SOURCE_DIR}/*.h"
@@ -17,4 +24,8 @@ get_filename_component(inc_dir "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 message(STATUS "[juce] ${inc_dir} ${CMAKE_BINARY_DIR}")
 
-target_include_directories(jure-engine PUBLIC ${inc_dir})
+target_include_directories(jure-engine PUBLIC ${inc_dir} ${VULKAN_SDK}/Include)
+target_link_libraries(jure-engine PUBLIC "${VULKAN_SDK}/Lib/vulkan-1.lib")
+
+
+
