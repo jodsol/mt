@@ -37,6 +37,7 @@ private:
     VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities);
     VkFormat find_depth_format();
     VkFormat find_supported_format();
+    uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 private:
     VkContext* m_context;

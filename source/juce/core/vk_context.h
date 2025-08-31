@@ -45,7 +45,7 @@ private:
     bool pick_physical_device();
     bool create_logical_device();
     bool create_command_pool();
-
+    
     VkCommandPool get_command_pool() const;
     bool is_device_suitable(VkPhysicalDevice device);
     QueueFamilyIndices find_queue_families(VkPhysicalDevice device);

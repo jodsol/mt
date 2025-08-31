@@ -300,7 +300,6 @@ bool VkContext::create_command_pool() {
     return true;
 }
 
-
 VkDevice VkContext::get_device() const {
     return m_device;
 }
