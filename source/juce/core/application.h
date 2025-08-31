@@ -14,6 +14,7 @@ public:
     
     VkContext* get_context() const;
     Swapchain* get_swapchain() const;
+    
     HWND get_hwnd() const;
 
 private:
@@ -24,6 +25,7 @@ private:
     HWND m_hwnd;
     VkContext* m_context;
     Swapchain* m_swapchain;
+    VkCommandPool m_command_pool = VK_NULL_HANDLE;
 };
 
 } // namespace juce

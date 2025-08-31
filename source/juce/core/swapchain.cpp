@@ -34,23 +34,59 @@ bool Swapchain::initialize(VkContext* context, uint32_t width, uint32_t height) 
         return false;
     }
 
+    if (!create_depth_resources()) {
+        log_error("Failed to create framebuffers");
+        return false;
+    }
+
+    if (!create_framebuffers(renderer->get_render_pass())) {
+        log_error("Failed to create framebuffers");
+        return false;
+    }
+
     log_info("Swapchain initialized successfully");
     return true;
 }
 
 void Swapchain::cleanup() {
-    if (m_context && m_context->get_device() != VK_NULL_HANDLE) {
-        for (auto image_view : m_image_views) {
-            vkDestroyImageView(m_context->get_device(), image_view, nullptr);
-        }
-        m_image_views.clear();
+    if (!m_context || m_context->get_device() == VK_NULL_HANDLE)
+        return;
 
-        if (m_swapchain != VK_NULL_HANDLE) {
-            vkDestroySwapchainKHR(m_context->get_device(), m_swapchain, nullptr);
-            m_swapchain = VK_NULL_HANDLE;
-        }
+    VkDevice device = m_context->get_device();
+
+    // 1. Framebuffers 삭제
+    for (auto fb : m_framebuffers) {
+        vkDestroyFramebuffer(device, fb, nullptr);
+    }
+    m_framebuffers.clear();
+
+    // 2. Depth 이미지 관련 리소스 삭제
+    if (m_depth_image_view != VK_NULL_HANDLE) {
+        vkDestroyImageView(device, m_depth_image_view, nullptr);
+        m_depth_image_view = VK_NULL_HANDLE;
+    }
+    if (m_depth_image != VK_NULL_HANDLE) {
+        vkDestroyImage(device, m_depth_image, nullptr);
+        m_depth_image = VK_NULL_HANDLE;
+    }
+    if (m_depth_image_memory != VK_NULL_HANDLE) {
+        vkFreeMemory(device, m_depth_image_memory, nullptr);
+        m_depth_image_memory = VK_NULL_HANDLE;
+    }
+
+    // 3. Swapchain 이미지 뷰 삭제
+    for (auto image_view : m_image_views) {
+        vkDestroyImageView(device, image_view, nullptr);
+    }
+    m_image_views.clear();
+
+    // 4. Swapchain 자체 삭제
+    if (m_swapchain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(device, m_swapchain, nullptr);
+        m_swapchain = VK_NULL_HANDLE;
     }
 }
+
 
 bool Swapchain::recreate(uint32_t width, uint32_t height) {
     m_width = width;
@@ -163,6 +199,87 @@ bool Swapchain::create_image_views() {
     return true;
 }
 
+bool Swapchain::create_framebuffers(VkRenderPass renderPass) {
+    m_framebuffers.resize(m_image_views.size());
+    for (size_t i = 0; i < m_image_views.size(); i++) {
+        VkImageView attachments[] = { m_image_views[i] };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = renderPass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.width = m_extent.width;
+        framebufferInfo.height = m_extent.height;
+        framebufferInfo.layers = 1;
+
+        VkResult result = vkCreateFramebuffer(m_context->get_device(), &framebufferInfo, nullptr, &m_framebuffers[i]);
+        if (result != VK_SUCCESS) {
+            log_error("Failed to create framebuffer %zu", i);
+            return false;
+        }
+    }
+    return true;
+}
+
+void Swapchain::create_depth_resources() {
+    VkFormat depthFormat = find_depth_format();
+
+    // 깊이 이미지 생성
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = m_extent.width;
+    imageInfo.extent.height = m_extent.height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = depthFormat;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateImage(m_context->get_device(), &imageInfo, nullptr, &m_depthImage) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create depth image!");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(m_context->get_device(), m_depthImage, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = m_context->find_memory_type(
+        memRequirements.memoryTypeBits,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+
+    if (vkAllocateMemory(m_context->get_device(), &allocInfo, nullptr, &m_depthImageMemory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate depth image memory!");
+    }
+
+    vkBindImageMemory(m_context->get_device(), m_depthImage, m_depthImageMemory, 0);
+
+    // 이미지 뷰 생성
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = m_depthImage;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = depthFormat;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    if (vkCreateImageView(m_context->get_device(), &viewInfo, nullptr, &m_depthImageView) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create depth image view!");
+    }
+}
+
+
 VkSurfaceFormatKHR Swapchain::choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats) {
     for (const auto& available_format : available_formats) {
         if (available_format.format == VK_FORMAT_B8G8R8A8_SRGB && 
@@ -201,6 +318,47 @@ VkExtent2D Swapchain::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabil
     }
 }
 
+VkResult Swapchain::acquire_next_image(uint32_t* imageIndex, VkSemaphore semaphore) {
+    return vkAcquireNextImageKHR(m_context->get_device(), m_swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, imageIndex);
+}
+
+VkResult Swapchain::present_image(VkQueue presentQueue, uint32_t imageIndex, VkSemaphore waitSemaphore) {
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &waitSemaphore;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &m_swapchain;
+    presentInfo.pImageIndices = &imageIndex;
+    return vkQueuePresentKHR(presentQueue, &presentInfo);
+}
+
+VkFormat Swapchain::find_supported_format(
+    const std::vector<VkFormat>& candidates,
+    VkImageTiling tiling,
+    VkFormatFeatureFlags features) 
+{
+    for (VkFormat format : candidates) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(m_context->get_physical_device(), format, &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+            return format;
+        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("failed to find supported format!");
+}
+
+VkFormat Swapchain::find_depth_format() {
+    return find_supported_format(
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    );
+}
 
 VkSwapchainKHR Swapchain::get_swapchain() const {
     return m_swapchain;

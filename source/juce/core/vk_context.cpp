@@ -46,11 +46,21 @@ bool VkContext::initialize(HWND hwnd, HINSTANCE hinstance) {
         return false;
     }
 
+    if (!create_command_pool()) {
+        log_error("Failed to create command pool");
+        return false;
+    }
+
     log_info("Vulkan context initialized successfully");
     return true;
 }
 
 void VkContext::cleanup() {
+    if (m_command_pool != VK_NULL_HANDLE) {
+        vkDestroyCommandPool(m_device, m_command_pool, nullptr);
+        m_command_pool = VK_NULL_HANDLE;
+    }
+
     if (m_device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(m_device);
         vkDestroyDevice(m_device, nullptr);
@@ -272,6 +282,24 @@ bool VkContext::create_logical_device() {
 
     return true;
 }
+
+bool VkContext::create_command_pool() {
+    QueueFamilyIndices indices = find_queue_families(m_physical_device);
+
+    VkCommandPoolCreateInfo pool_info{};
+    pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // 필요하면 커맨드 버퍼 재사용 가능
+    pool_info.queueFamilyIndex = indices.graphics_family.value();
+
+    VkResult result = vkCreateCommandPool(m_device, &pool_info, nullptr, &m_command_pool);
+    if (result != VK_SUCCESS) {
+        log_error("Failed to create command pool. Error code: %d", result);
+        return false;
+    }
+
+    return true;
+}
+
 
 VkDevice VkContext::get_device() const {
     return m_device;

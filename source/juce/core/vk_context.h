@@ -44,7 +44,9 @@ private:
     bool create_surface();
     bool pick_physical_device();
     bool create_logical_device();
-    
+    bool create_command_pool();
+
+    VkCommandPool get_command_pool() const;
     bool is_device_suitable(VkPhysicalDevice device);
     QueueFamilyIndices find_queue_families(VkPhysicalDevice device);
     bool check_device_extension_support(VkPhysicalDevice device);
@@ -57,6 +59,7 @@ private:
     VkQueue m_graphics_queue;
     VkQueue m_present_queue;
     VkSurfaceKHR m_surface;
+    VkCommandPool m_command_pool;
     
     HWND m_hwnd;
     HINSTANCE m_hinstance;

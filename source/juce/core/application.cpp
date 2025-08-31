@@ -112,6 +112,7 @@ int Application::exec(void* scene) {
     return 0;
 }
 
+
 void Application::update() {
     // 게임 로직 업데이트
 }
