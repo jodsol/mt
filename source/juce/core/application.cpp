@@ -1,61 +1,127 @@
 #include "application.h"
 #include "win32_config.h"
 #include "logger.h"
+#include "vk_context.h"
+#include "swapchain.h"
+#include "backend.h"
+#include <cassert>
 
 namespace juce 
 {
 
-LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+
+LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) 
+{
+    Application* app = nullptr;
+
+    if (msg == WM_NCCREATE) 
+    {
+        // On window creation, store the 'this' pointer passed from CreateWindowEx.
+        CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lp);
+        app = reinterpret_cast<Application*>(pCreate->lpCreateParams);
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)app);
+    }
+    else 
+    {
+        // For other messages, retrieve the stored 'this' pointer.
+        app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+    }
+
+    if (app) 
+    {
+        switch (msg) 
+        {
+            case WM_SIZE: 
+            {
+                uint32_t width = LOWORD(lp);
+                uint32_t height = HIWORD(lp);
+                app->on_window_resized(width, height);
+                break;
+            }
+            case WM_DESTROY:
+            {
+                PostQuitMessage(0);
+                break;
+            }
+            default:
+            {
+                return ::DefWindowProc(hwnd, msg, wp, lp);
+            }
+        }
+        return 0;
+    }
+    
+    return ::DefWindowProc(hwnd, msg, wp, lp);
+}
 
 Application::Application(int args, char* argv[], int cx, int cy) 
     : m_hwnd(nullptr)
     , m_context(nullptr)
     , m_swapchain(nullptr)
+    , m_backend(nullptr) // Initialize backend pointer
 {
+    // 1. Register the window class
     WNDCLASSEXA wc{};
     wc.cbSize = sizeof(WNDCLASSEXA);
-    wc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = static_wnd_proc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.lpfnWndProc = static_wnd_proc;
-    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
+    wc.lpszClassName = "Juce Engine";
     wc.hIcon = 0;
-    wc.lpszClassName = "Jure Engine";
 
     if (!::RegisterClassExA(&wc)) 
     {
         assert(0 && "failed to registered class");
+        return;
     }
 
-    int x = (GetSystemMetrics(SM_CXSCREEN) - cx) / 2;
-    int y = (GetSystemMetrics(SM_CYSCREEN) - cy) / 2;
+    // 2. Create the window
+    int screen_width = GetSystemMetrics(SM_CXSCREEN);
+    int screen_height = GetSystemMetrics(SM_CYSCREEN);
+    int x = (screen_width - cx) / 2;
+    int y = (screen_height - cy) / 2;
 
     m_hwnd = CreateWindowExA(
         NULL,
         wc.lpszClassName,
         wc.lpszClassName,
         WS_OVERLAPPEDWINDOW,
-        x, y, cx, cy, nullptr,
-        0, wc.hInstance, nullptr);
+        x, y, cx, cy, 
+        nullptr,
+        nullptr, 
+        wc.hInstance, 
+        this // Pass 'this' to be captured in WM_NCCREATE
+    );
 
     assert(m_hwnd && L"failed to create window");
 
-    // Vulkan 초기화
-    m_context = new VkContext();
+    // 3. Initialize Vulkan components in sequence
+    // Initialize Vulkan Context
+    m_context = new VKContext();
     if (!m_context->initialize(m_hwnd, wc.hInstance)) {
         log_error("Failed to initialize Vulkan context");
-        delete m_context;
-        m_context = nullptr;
+        delete m_context; m_context = nullptr;
         return;
     }
 
+    // Initialize Swapchain
     m_swapchain = new Swapchain();
     if (!m_swapchain->initialize(m_context, cx, cy)) {
         log_error("Failed to initialize swapchain");
-        delete m_swapchain;
-        m_swapchain = nullptr;
-        delete m_context;
-        m_context = nullptr;
+        delete m_swapchain; m_swapchain = nullptr;
+        delete m_context; m_context = nullptr;
+        return;
+    }
+
+    // Initialize Backend Renderer
+    m_backend = new Backend(m_context, m_swapchain);
+    if (!m_backend->initialize()) {
+        log_error("Failed to initialize backend");
+        delete m_backend; m_backend = nullptr;
+        delete m_swapchain; m_swapchain = nullptr;
+        delete m_context; m_context = nullptr;
         return;
     }
 
@@ -63,39 +129,28 @@ Application::Application(int args, char* argv[], int cx, int cy)
     log_info("%s window created with Vulkan", wc.lpszClassName);
 }
 
-Application::~Application() {
+Application::~Application() 
+{
+    // Clean up resources in reverse order of creation
+    if (m_backend) {
+        delete m_backend;
+    }
     if (m_swapchain) {
         delete m_swapchain;
-        m_swapchain = nullptr;
     }
-    
     if (m_context) {
         delete m_context;
-        m_context = nullptr;
     }
+    // HWND is destroyed by the OS
 }
 
-LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
-    switch (msg) {
-    case WM_SIZE: {
-        // 윈도우 크기 변경 시 스왑체인 재생성 필요
-        // 실제 구현에서는 Application 인스턴스에 접근해서 스왑체인을 재생성해야 함
-        break;
-    }
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    default:
-        break;
-    }
-    return ::DefWindowProc(hwnd, msg, wp, lp);
-}
-
-int Application::exec(void* scene) {
+int Application::exec(void* scene) 
+{
     MSG msg{};
-    while (msg.message != WM_QUIT) {
-        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-            // FIXME : 임시 처리 추후 이벤트로 종료
+    while (msg.message != WM_QUIT) 
+    {
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) 
+        {
             if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
                 PostQuitMessage(0);
             }
@@ -103,32 +158,43 @@ int Application::exec(void* scene) {
             ::DispatchMessage(&msg);
         }
 
-        // update
+        // Main loop logic
         update();
-        
-        // render
         render();
     }
-    return 0;
+    return static_cast<int>(msg.wParam);
 }
 
-
-void Application::update() {
-    // 게임 로직 업데이트
+void Application::update() 
+{
+    // Game/application logic updates go here
 }
 
-void Application::render() {
-    if (!m_context || !m_swapchain) {
-        return;
+void Application::render() 
+{
+    if (m_backend) 
+    {
+        try {
+            m_backend->draw_frame();
+        } 
+        catch (const std::exception& e) {
+            log_error("Error during rendering: %s", e.what());
+            // Exit the loop on a critical rendering error
+            PostQuitMessage(1);
+        }
     }
-
-    // 간단한 렌더링 루프
-    // 실제로는 여기서 커맨드 버퍼를 기록하고 제출해야 함
-    
-    // 현재는 빈 구현
 }
 
-VkContext* Application::get_context() const {
+void Application::on_window_resized(uint32_t width, uint32_t height) 
+{
+    if (m_backend) {
+        m_backend->on_window_resized(width, height);
+    }
+}
+
+// --- Getters ---
+
+VKContext* Application::get_context() const {
     return m_context;
 }
 

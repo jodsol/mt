@@ -1,9 +1,15 @@
 #pragma once
 #include "win32_config.h"
-#include "vk_context.h"
-#include "swapchain.h"
 
+// Forward declarations
 namespace juce {
+    class VKContext;
+    class Swapchain;
+    class Backend; // Backend 클래스 전방 선언
+}
+
+namespace juce 
+{
 
 class Application {
 public:
@@ -11,21 +17,22 @@ public:
     ~Application();
 
     int exec(void* scene);
+    void update();
+    void render();
     
-    VkContext* get_context() const;
+    // 창 크기 변경 이벤트를 처리할 함수
+    void on_window_resized(uint32_t width, uint32_t height);
+
+    // Getters
+    VKContext* get_context() const;
     Swapchain* get_swapchain() const;
-    
     HWND get_hwnd() const;
 
 private:
-    void update();
-    void render();
-
-private:
     HWND m_hwnd;
-    VkContext* m_context;
+    VKContext* m_context;
     Swapchain* m_swapchain;
-    VkCommandPool m_command_pool = VK_NULL_HANDLE;
+    Backend* m_backend; // Backend 멤버 변수 추가
 };
 
 } // namespace juce
