@@ -1,7 +1,7 @@
+#include <juce/core/typedef.h>
+#include <juce/core/win32_config.h>
 #include "vk_context.h"
-#include "win32_config.h"
-#include "logger.h"
-
+#include <juce/core/logger.h>
 #include <iostream>
 #include <set>
 #include <algorithm>
@@ -169,9 +169,9 @@ bool vk_context::create_instance()
         throw std::runtime_error("Validation layers requested, but not available!");
     }
 
-    VkapplicationInfo app_info{};
-    app_info.sType = VK_STRUCTURE_TYPE_application_INFO;
-    app_info.papplicationName = "Juce Engine";
+    VkApplicationInfo app_info{};
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName = "Juce Engine";
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName = "Juce Engine";
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -181,7 +181,7 @@ bool vk_context::create_instance()
 
     VkInstanceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    create_info.papplicationInfo = &app_info;
+    create_info.pApplicationInfo = &app_info;
     create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
     create_info.ppEnabledExtensionNames = extensions.data();
 

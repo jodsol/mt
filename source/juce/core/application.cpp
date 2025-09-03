@@ -1,9 +1,6 @@
 #include "application.h"
 #include "win32_config.h"
 #include "logger.h"
-#include "vk_context.h"
-#include "swapchain.h"
-#include "backend.h"
 #include <cassert>
 
 namespace juce
@@ -54,7 +51,7 @@ LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 }
 
 application::application(int args, char* argv[], int cx, int cy)
-    : m_hwnd(nullptr), m_context(nullptr), m_swapchain(nullptr), m_backend(nullptr) // Initialize backend pointer
+    : m_hwnd(nullptr), m_context(nullptr)
 {
     // 1. Register the window class
     WNDCLASSEXA wc{};
@@ -93,38 +90,11 @@ application::application(int args, char* argv[], int cx, int cy)
 
     assert(m_hwnd && L"failed to create window");
 
-    // 3. Initialize Vulkan components in sequence
-    // Initialize Vulkan Context
-    m_context = new vk_context();
-    if (!m_context->initialize(m_hwnd, wc.hInstance))
-    {
-        log_error("Failed to initialize Vulkan context");
-        delete m_context;
-        m_context = nullptr;
-        return;
-    }
-
-    // Initialize swapchain
-    m_swapchain = new swapchain();
-    if (!m_swapchain->initialize(m_context, cx, cy))
-    {
-        log_error("Failed to initialize swapchain");
-        delete m_swapchain;
-        m_swapchain = nullptr;
-        delete m_context;
-        m_context = nullptr;
-        return;
-    }
-
     // Initialize backend Renderer
-    m_backend = new backend(m_context, m_swapchain);
-    if (!m_backend->initialize())
+    m_context = new context();
+    if (!m_context->initialize(m_hwnd, wc.hInstance, cx, cy))
     {
         log_error("Failed to initialize backend");
-        delete m_backend;
-        m_backend = nullptr;
-        delete m_swapchain;
-        m_swapchain = nullptr;
         delete m_context;
         m_context = nullptr;
         return;
@@ -136,15 +106,6 @@ application::application(int args, char* argv[], int cx, int cy)
 
 application::~application()
 {
-    // Clean up resources in reverse order of creation
-    if (m_backend)
-    {
-        delete m_backend;
-    }
-    if (m_swapchain)
-    {
-        delete m_swapchain;
-    }
     if (m_context)
     {
         delete m_context;
@@ -181,6 +142,7 @@ void application::update()
 
 void application::render()
 {
+    /**
     if (m_backend)
     {
         try
@@ -194,26 +156,17 @@ void application::render()
             PostQuitMessage(1);
         }
     }
+         */
 }
 
 void application::on_window_resized(uint32_t width, uint32_t height)
 {
+    /**
     if (m_backend)
     {
         m_backend->on_window_resized(width, height);
     }
-}
-
-// --- Getters ---
-
-vk_context* application::get_context() const
-{
-    return m_context;
-}
-
-swapchain* application::get_swapchain() const
-{
-    return m_swapchain;
+         */
 }
 
 HWND application::get_hwnd() const

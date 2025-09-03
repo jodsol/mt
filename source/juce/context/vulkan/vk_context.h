@@ -1,6 +1,7 @@
 #pragma once
 
-#include "win32_config.h"
+#include <juce/core/typedef.h>
+#include <juce/core/win32_config.h>
 #include <vector>
 #include <optional>
 #include <string>
@@ -89,7 +90,7 @@ private:
     const std::vector<const char*> m_validation_layers = {
         "VK_LAYER_KHRONOS_validation"};
     const std::vector<const char*> m_device_extensions = {
-        VK_KHR_swapchain_EXTENSION_NAME};
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
     const bool m_enable_validation_layers =
 #ifdef NDEBUG
         false;

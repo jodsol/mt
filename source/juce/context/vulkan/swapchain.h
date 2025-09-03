@@ -1,6 +1,6 @@
 #pragma once
 
-#include "win32_config.h"
+#include <juce/core/win32_config.h>
 #include <vector>
 #include <cstdint>
 
@@ -40,7 +40,7 @@ public:
     // 프레젠트 큐 제출
     VkResult present_image(VkQueue presentQueue, uint32_t imageIndex, VkSemaphore waitSemaphore);
 
-    VkswapchainKHR get_handle() const;
+    VkSwapchainKHR get_handle() const;
     VkFormat get_image_format() const;
     VkExtent2D get_extent() const;
     VkImageView get_image_view(uint32_t index) const;
@@ -66,7 +66,7 @@ private:
     uint32_t find_memory_type(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 private:
-    VkswapchainKHR m_swapchain;
+    VkSwapchainKHR m_swapchain;
     VkFormat m_format;
     VkExtent2D m_extent;
 

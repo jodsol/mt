@@ -1,8 +1,9 @@
 // swapchain은 "present 대상 이미지 + 관련 Framebuffer"를 책임
-#include "win32_config.h"
+#include <juce/core/win32_config.h>
+#include <juce/core/logger.h>
+
 #include "swapchain.h"
 #include "vk_context.h"
-#include "logger.h"
 
 #include <algorithm>
 #include <limits>
@@ -103,7 +104,7 @@ void swapchain::cleanup()
     // swapchain
     if (m_swapchain != VK_NULL_HANDLE)
     {
-        vkDestroyswapchainKHR(device, m_swapchain, nullptr);
+        vkDestroySwapchainKHR(device, m_swapchain, nullptr);
         m_swapchain = VK_NULL_HANDLE;
     }
 }
@@ -209,7 +210,7 @@ VkResult swapchain::present_image(VkQueue presentQueue, uint32_t imageIndex, VkS
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &waitSemaphore;
     presentInfo.swapchainCount = 1;
-    presentInfo.pswapchains = &m_swapchain;
+    presentInfo.pSwapchains = &m_swapchain;
     presentInfo.pImageIndices = &imageIndex;
     return vkQueuePresentKHR(presentQueue, &presentInfo);
 }
@@ -229,8 +230,8 @@ bool swapchain::create_swapchain()
         image_count = swapchain_support.capabilities.maxImageCount;
     }
 
-    VkswapchainCreateInfoKHR create_info{};
-    create_info.sType = VK_STRUCTURE_TYPE_swapchain_CREATE_INFO_KHR;
+    VkSwapchainCreateInfoKHR create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     create_info.surface = m_context->get_surface();
     create_info.minImageCount = image_count;
     create_info.imageFormat = surface_format.format;
@@ -258,17 +259,17 @@ bool swapchain::create_swapchain()
     create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     create_info.presentMode = present_mode;
     create_info.clipped = VK_TRUE;
-    create_info.oldswapchain = VK_NULL_HANDLE;
+    create_info.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateswapchainKHR(m_context->get_device(), &create_info, nullptr, &m_swapchain) != VK_SUCCESS)
+    if (vkCreateSwapchainKHR(m_context->get_device(), &create_info, nullptr, &m_swapchain) != VK_SUCCESS)
     {
         log_error("Failed to create swapchain");
         return false;
     }
 
-    vkGetswapchainImagesKHR(m_context->get_device(), m_swapchain, &image_count, nullptr);
+    vkGetSwapchainImagesKHR(m_context->get_device(), m_swapchain, &image_count, nullptr);
     m_images.resize(image_count);
-    vkGetswapchainImagesKHR(m_context->get_device(), m_swapchain, &image_count, m_images.data());
+    vkGetSwapchainImagesKHR(m_context->get_device(), m_swapchain, &image_count, m_images.data());
 
     m_format = surface_format.format;
     m_extent = extent;
@@ -459,7 +460,7 @@ uint32_t swapchain::find_memory_type(uint32_t typeFilter, VkMemoryPropertyFlags 
     throw std::runtime_error("Failed to find suitable memory type!");
 }
 
-VkswapchainKHR swapchain::get_handle() const { return m_swapchain; }
+VkSwapchainKHR swapchain::get_handle() const { return m_swapchain; }
 VkFormat swapchain::get_image_format() const { return m_format; }
 VkExtent2D swapchain::get_extent() const { return m_extent; }
 VkImageView swapchain::get_image_view(uint32_t index) const { return m_image_views[index]; }

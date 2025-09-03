@@ -89,9 +89,9 @@ void backend::draw_frame()
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = signal_semaphores;
 
-    VkswapchainKHR swap_chains[] = {m_swapchain->get_handle()};
+    VkSwapchainKHR swap_chains[] = {m_swapchain->get_handle()};
     present_info.swapchainCount = 1;
-    present_info.pswapchains = swap_chains;
+    present_info.pSwapchains = swap_chains;
     present_info.pImageIndices = &image_index;
 
     result = vkQueuePresentKHR(m_context->get_present_queue(), &present_info);
@@ -411,7 +411,7 @@ void backend::recreate_swapchain_dependents()
     cleanup_swapchain_dependents();
 
     // swapchain 자체의 recreate() 호출 필요할 수 있음
-    m_swapchain->recreate();
+    // m_swapchain->recreate();
 
     create_render_pass();
     create_graphics_pipeline();
