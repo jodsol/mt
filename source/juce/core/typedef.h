@@ -9,4 +9,4 @@ typedef HWND__* HWND;
 struct HINSTANCE__;
 typedef HINSTANCE__* HINSTANCE;
 
-class VKContext;
+class vk_context;

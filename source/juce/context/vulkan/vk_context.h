@@ -1,34 +1,40 @@
 #pragma once
 
-#include "win32_config.h"
+#include <juce/core/typedef.h>
+#include <juce/core/win32_config.h>
 #include <vector>
 #include <optional>
 #include <string>
 
-namespace juce {
+namespace juce
+{
 
-class VKContext {
+class vk_context
+{
 public:
-    // --- Swapchain 지원 구조체 ---
-    struct SwapchainSupportDetails {
+    // --- swapchain 지원 구조체 ---
+    struct swapchainSupportDetails
+    {
         VkSurfaceCapabilitiesKHR capabilities;
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> present_modes;
     };
 
     // --- 큐 패밀리 인덱스 ---
-    struct QueueFamilyIndices {
+    struct QueueFamilyIndices
+    {
         std::optional<uint32_t> graphics_family;
         std::optional<uint32_t> present_family;
 
-        bool is_complete() const {
+        bool is_complete() const
+        {
             return graphics_family.has_value() && present_family.has_value();
         }
     };
 
     // --- 생성자 & 소멸자 ---
-    VKContext();
-    ~VKContext();
+    vk_context();
+    ~vk_context();
 
     // --- 초기화 & 정리 ---
     bool initialize(HWND hwnd, HINSTANCE hinstance);
@@ -43,7 +49,7 @@ public:
     VkCommandPool get_command_pool() const;
     uint32_t get_graphics_queue_family() const;
     uint32_t get_present_queue_family() const;
-    SwapchainSupportDetails get_swapchain_support() const;
+    swapchainSupportDetails get_swapchain_support() const;
 
 private:
     // --- 내부 초기화 단계 ---
@@ -60,7 +66,7 @@ private:
     bool is_device_suitable(VkPhysicalDevice device);
     QueueFamilyIndices find_queue_families(VkPhysicalDevice device);
     bool check_device_extension_support(VkPhysicalDevice device);
-    SwapchainSupportDetails query_swapchain_support(VkPhysicalDevice device) const;
+    swapchainSupportDetails query_swapchain_support(VkPhysicalDevice device) const;
 
     // --- Vulkan 객체 ---
     VkInstance m_instance;
@@ -82,17 +88,15 @@ private:
 
     // --- 설정값 ---
     const std::vector<const char*> m_validation_layers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
+        "VK_LAYER_KHRONOS_validation"};
     const std::vector<const char*> m_device_extensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
     const bool m_enable_validation_layers =
-    #ifdef NDEBUG
+#ifdef NDEBUG
         false;
-    #else
+#else
         true;
-    #endif
+#endif
 };
 
 } // namespace juce

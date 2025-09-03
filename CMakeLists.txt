@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(jure-engine LANGUAGES C CXX VERSION 0.0.0)
+project(juce-engine LANGUAGES C CXX VERSION 0.0.0)
 
 
 set(CMAKE_CXX_STANDARD 17)

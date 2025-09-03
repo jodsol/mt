@@ -1,15 +1,16 @@
-// Backend는 "이 프레임버퍼를 어떻게 그릴지(RenderPass + Pipeline)"를 책임
-#include "Backend.h"
+// backend는 "이 프레임버퍼를 어떻게 그릴지(RenderPass + Pipeline)"를 책임
+#include "backend.h"
 #include "vk_context.h"
-#include "Swapchain.h"
+#include "swapchain.h"
 
 #include <stdexcept>
 #include <fstream>
 #include <iostream>
 #include <array>
 
-namespace juce {
-Backend::Backend(VKContext* context, Swapchain* swapchain)
+namespace juce
+{
+backend::backend(vk_context* context, swapchain* swapchain)
     : m_context(context),
       m_swapchain(swapchain),
       m_render_pass(VK_NULL_HANDLE),
@@ -18,37 +19,43 @@ Backend::Backend(VKContext* context, Swapchain* swapchain)
 {
 }
 
-Backend::~Backend()
+backend::~backend()
 {
     cleanup();
 }
 
-bool Backend::initialize()
+bool backend::initialize()
 {
-    try {
+    try
+    {
         create_render_pass();
         create_graphics_pipeline();
         m_swapchain->create_framebuffers(m_render_pass);
         create_command_buffers();
         create_sync_objects();
-    } catch (const std::runtime_error& e) {
-        std::cerr << "Backend initialization failed: " << e.what() << std::endl;
+    }
+    catch (const std::runtime_error& e)
+    {
+        std::cerr << "backend initialization failed: " << e.what() << std::endl;
         return false;
     }
     return true;
 }
 
-void Backend::draw_frame()
+void backend::draw_frame()
 {
     vkWaitForFences(m_context->get_device(), 1, &m_in_flight_fences[m_current_frame], VK_TRUE, UINT64_MAX);
 
     uint32_t image_index;
     VkResult result = vkAcquireNextImageKHR(m_context->get_device(), m_swapchain->get_handle(), UINT64_MAX, m_image_available_semaphores[m_current_frame], VK_NULL_HANDLE, &image_index);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
         recreate_swapchain_dependents();
         return;
-    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
@@ -60,19 +67,20 @@ void Backend::draw_frame()
     VkSubmitInfo submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore wait_semaphores[] = { m_image_available_semaphores[m_current_frame] };
-    VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSemaphore wait_semaphores[] = {m_image_available_semaphores[m_current_frame]};
+    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = wait_semaphores;
     submit_info.pWaitDstStageMask = wait_stages;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_command_buffers[m_current_frame];
 
-    VkSemaphore signal_semaphores[] = { m_render_finished_semaphores[m_current_frame] };
+    VkSemaphore signal_semaphores[] = {m_render_finished_semaphores[m_current_frame]};
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_semaphores;
 
-    if (vkQueueSubmit(m_context->get_graphics_queue(), 1, &submit_info, m_in_flight_fences[m_current_frame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(m_context->get_graphics_queue(), 1, &submit_info, m_in_flight_fences[m_current_frame]) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
@@ -81,31 +89,34 @@ void Backend::draw_frame()
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = signal_semaphores;
 
-    VkSwapchainKHR swap_chains[] = { m_swapchain->get_handle() };
+    VkSwapchainKHR swap_chains[] = {m_swapchain->get_handle()};
     present_info.swapchainCount = 1;
     present_info.pSwapchains = swap_chains;
     present_info.pImageIndices = &image_index;
 
     result = vkQueuePresentKHR(m_context->get_present_queue(), &present_info);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebuffer_resized) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebuffer_resized)
+    {
         m_framebuffer_resized = false;
         recreate_swapchain_dependents();
-    } else if (result != VK_SUCCESS) {
+    }
+    else if (result != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to present swap chain image!");
     }
 
     m_current_frame = (m_current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void Backend::on_window_resized(uint32_t width, uint32_t height)
+void backend::on_window_resized(uint32_t width, uint32_t height)
 {
     m_framebuffer_resized = true;
     // The actual recreation happens at the beginning of draw_frame
     // to ensure synchronization.
 }
 
-void Backend::create_render_pass()
+void backend::create_render_pass()
 {
     VkAttachmentDescription color_attachment{};
     color_attachment.format = m_swapchain->get_image_format();
@@ -143,12 +154,13 @@ void Backend::create_render_pass()
     render_pass_info.dependencyCount = 1;
     render_pass_info.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(m_context->get_device(), &render_pass_info, nullptr, &m_render_pass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(m_context->get_device(), &render_pass_info, nullptr, &m_render_pass) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create render pass!");
     }
 }
 
-void Backend::create_graphics_pipeline()
+void backend::create_graphics_pipeline()
 {
     auto vert_shader_code = read_file("shaders/vert.spv");
     auto frag_shader_code = read_file("shaders/frag.spv");
@@ -168,7 +180,7 @@ void Backend::create_graphics_pipeline()
     frag_shader_stage_info.module = frag_shader_module;
     frag_shader_stage_info.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
+    VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -189,7 +201,7 @@ void Backend::create_graphics_pipeline()
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor{};
-    scissor.offset = { 0, 0 };
+    scissor.offset = {0, 0};
     scissor.extent = m_swapchain->get_extent();
 
     VkPipelineViewportStateCreateInfo viewport_state{};
@@ -227,7 +239,8 @@ void Backend::create_graphics_pipeline()
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-    if (vkCreatePipelineLayout(m_context->get_device(), &pipeline_layout_info, nullptr, &m_pipeline_layout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(m_context->get_device(), &pipeline_layout_info, nullptr, &m_pipeline_layout) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -245,7 +258,8 @@ void Backend::create_graphics_pipeline()
     pipeline_info.renderPass = m_render_pass;
     pipeline_info.subpass = 0;
 
-    if (vkCreateGraphicsPipelines(m_context->get_device(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(m_context->get_device(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
 
@@ -253,7 +267,7 @@ void Backend::create_graphics_pipeline()
     vkDestroyShaderModule(m_context->get_device(), vert_shader_module, nullptr);
 }
 
-void Backend::create_command_buffers()
+void backend::create_command_buffers()
 {
     m_command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
 
@@ -263,12 +277,13 @@ void Backend::create_command_buffers()
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = (uint32_t)m_command_buffers.size();
 
-    if (vkAllocateCommandBuffers(m_context->get_device(), &alloc_info, m_command_buffers.data()) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(m_context->get_device(), &alloc_info, m_command_buffers.data()) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
 
-void Backend::create_sync_objects()
+void backend::create_sync_objects()
 {
     m_image_available_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
     m_render_finished_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
@@ -281,21 +296,24 @@ void Backend::create_sync_objects()
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
         if (vkCreateSemaphore(m_context->get_device(), &semaphore_info, nullptr, &m_image_available_semaphores[i]) != VK_SUCCESS ||
             vkCreateSemaphore(m_context->get_device(), &semaphore_info, nullptr, &m_render_finished_semaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(m_context->get_device(), &fence_info, nullptr, &m_in_flight_fences[i]) != VK_SUCCESS) {
+            vkCreateFence(m_context->get_device(), &fence_info, nullptr, &m_in_flight_fences[i]) != VK_SUCCESS)
+        {
             throw std::runtime_error("failed to create synchronization objects for a frame!");
         }
     }
 }
 
-void Backend::record_command_buffer(VkCommandBuffer command_buffer, uint32_t image_index)
+void backend::record_command_buffer(VkCommandBuffer command_buffer, uint32_t image_index)
 {
     VkCommandBufferBeginInfo begin_info{};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-    if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS) {
+    if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
@@ -303,10 +321,10 @@ void Backend::record_command_buffer(VkCommandBuffer command_buffer, uint32_t ima
     render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     render_pass_info.renderPass = m_render_pass;
     render_pass_info.framebuffer = m_swapchain->get_framebuffer(image_index);
-    render_pass_info.renderArea.offset = { 0, 0 };
+    render_pass_info.renderArea.offset = {0, 0};
     render_pass_info.renderArea.extent = m_swapchain->get_extent();
 
-    VkClearValue clear_color = {{{ 0.0f, 0.0f, 0.0f, 1.0f }}};
+    VkClearValue clear_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
     render_pass_info.clearValueCount = 1;
     render_pass_info.pClearValues = &clear_color;
 
@@ -315,16 +333,18 @@ void Backend::record_command_buffer(VkCommandBuffer command_buffer, uint32_t ima
     vkCmdDraw(command_buffer, 3, 1, 0, 0); // Draws a single triangle
     vkCmdEndRenderPass(command_buffer);
 
-    if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to record command buffer!");
     }
 }
 
-std::vector<char> Backend::read_file(const std::string& filename)
+std::vector<char> backend::read_file(const std::string& filename)
 {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
-    if (!file.is_open()) {
+    if (!file.is_open())
+    {
         throw std::runtime_error("failed to open file: " + filename);
     }
 
@@ -338,7 +358,7 @@ std::vector<char> Backend::read_file(const std::string& filename)
     return buffer;
 }
 
-VkShaderModule Backend::create_shader_module(const std::vector<char>& code)
+VkShaderModule backend::create_shader_module(const std::vector<char>& code)
 {
     VkShaderModuleCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -346,14 +366,15 @@ VkShaderModule Backend::create_shader_module(const std::vector<char>& code)
     create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
     VkShaderModule shader_module;
-    if (vkCreateShaderModule(m_context->get_device(), &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+    if (vkCreateShaderModule(m_context->get_device(), &create_info, nullptr, &shader_module) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create shader module!");
     }
 
     return shader_module;
 }
 
-void Backend::cleanup_swapchain_dependents()
+void backend::cleanup_swapchain_dependents()
 {
     m_swapchain->cleanup_framebuffers();
 
@@ -362,7 +383,7 @@ void Backend::cleanup_swapchain_dependents()
     vkDestroyRenderPass(m_context->get_device(), m_render_pass, nullptr);
 }
 
-void Backend::cleanup()
+void backend::cleanup()
 {
     // Wait for the device to be idle before destroying objects
     vkDeviceWaitIdle(m_context->get_device());
@@ -373,29 +394,29 @@ void Backend::cleanup()
         m_context->get_device(),
         m_context->get_command_pool(),
         static_cast<uint32_t>(m_command_buffers.size()),
-        m_command_buffers.data()
-    );
+        m_command_buffers.data());
 
-    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
         vkDestroySemaphore(m_context->get_device(), m_render_finished_semaphores[i], nullptr);
         vkDestroySemaphore(m_context->get_device(), m_image_available_semaphores[i], nullptr);
         vkDestroyFence(m_context->get_device(), m_in_flight_fences[i], nullptr);
     }
 }
 
-void Backend::recreate_swapchain_dependents()
+void backend::recreate_swapchain_dependents()
 {
     vkDeviceWaitIdle(m_context->get_device());
 
     cleanup_swapchain_dependents();
 
-    // Swapchain 자체의 recreate() 호출 필요할 수 있음
-    m_swapchain->recreate(); 
+    // swapchain 자체의 recreate() 호출 필요할 수 있음
+    // m_swapchain->recreate();
 
     create_render_pass();
     create_graphics_pipeline();
-    
-    // RenderPass 새로 만들었으니, Swapchain에게 다시 Framebuffer 생성 요청
+
+    // RenderPass 새로 만들었으니, swapchain에게 다시 Framebuffer 생성 요청
     m_swapchain->create_framebuffers(m_render_pass);
 }
 
