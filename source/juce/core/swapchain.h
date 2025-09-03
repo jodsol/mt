@@ -4,22 +4,24 @@
 #include <vector>
 #include <cstdint>
 
-namespace juce {
+namespace juce
+{
 
-class VKContext;
+class vk_context;
 
 /**
- * Swapchain wrapper class
- * - 관리: Swapchain, ImageViews, DepthBuffer, Framebuffers
+ * swapchain wrapper class
+ * - 관리: swapchain, ImageViews, DepthBuffer, Framebuffers
  * - 기능: 생성/정리/재생성, 이미지 획득, 프레젠트
  */
-class Swapchain {
+class swapchain
+{
 public:
-    Swapchain();
-    ~Swapchain();
+    swapchain();
+    ~swapchain();
 
-    // Swapchain 및 관련 리소스 초기화
-    bool initialize(VKContext* context, uint32_t width, uint32_t height);
+    // swapchain 및 관련 리소스 초기화
+    bool initialize(vk_context* context, uint32_t width, uint32_t height);
 
     // 리소스 정리
     void cleanup();
@@ -29,7 +31,7 @@ public:
 
     // RenderPass에 맞는 Framebuffer 생성
     bool create_framebuffers(VkRenderPass renderPass);
-    
+
     void cleanup_framebuffers();
 
     // 이미지 획득
@@ -38,7 +40,7 @@ public:
     // 프레젠트 큐 제출
     VkResult present_image(VkQueue presentQueue, uint32_t imageIndex, VkSemaphore waitSemaphore);
 
-    VkSwapchainKHR get_handle() const;
+    VkswapchainKHR get_handle() const;
     VkFormat get_image_format() const;
     VkExtent2D get_extent() const;
     VkImageView get_image_view(uint32_t index) const;
@@ -46,7 +48,7 @@ public:
     uint32_t get_image_count() const;
 
 private:
-    // Swapchain 관련 생성
+    // swapchain 관련 생성
     bool create_swapchain();
     bool create_image_views();
     bool create_depth_resources();
@@ -64,7 +66,7 @@ private:
     uint32_t find_memory_type(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 private:
-    VkSwapchainKHR m_swapchain;
+    VkswapchainKHR m_swapchain;
     VkFormat m_format;
     VkExtent2D m_extent;
 
@@ -76,7 +78,7 @@ private:
     VkDeviceMemory m_depth_image_memory;
     VkImageView m_depth_image_view;
 
-    VKContext* m_context; // 소유하지 않음
+    vk_context* m_context; // 소유하지 않음
     uint32_t m_width;
     uint32_t m_height;
 };

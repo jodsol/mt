@@ -1,29 +1,26 @@
 #pragma once
 
-
-
 #include <vulkan/vulkan.h>
 
 #include <vector>
 
 #include <string>
 
-
-
 // Forward declarations
-namespace juce {
-    class VKContext;
-    class Swapchain;
-}
-
-namespace juce 
+namespace juce
 {
-class Backend 
+class vk_context;
+class swapchain;
+} // namespace juce
+
+namespace juce
+{
+class backend
 {
 public:
-    Backend(VKContext* context, Swapchain* swapchain);
-    ~Backend();
-    // Backend 초기화 (RenderPass, Pipeline, CommandBuffer 등 생성)
+    backend(vk_context* context, swapchain* swapchain);
+    ~backend();
+    // backend 초기화 (RenderPass, Pipeline, CommandBuffer 등 생성)
     bool initialize();
     // 렌더링 루프에서 매 프레임 호출될 함수
     void draw_frame();
@@ -51,9 +48,8 @@ private:
     // 창 크기 변경에 따른 리소스 재생성
     void recreate_swapchain_dependents();
 
-
-    VKContext* m_context;       // 소유하지 않음
-    Swapchain* m_swapchain;     // 소유하지 않음
+    vk_context* m_context;  // 소유하지 않음
+    swapchain* m_swapchain; // 소유하지 않음
     VkRenderPass m_render_pass;
     VkPipelineLayout m_pipeline_layout;
     VkPipeline m_graphics_pipeline;
@@ -68,6 +64,5 @@ private:
 
     // 창 크기 변경 여부를 추적하는 플래그
     bool m_framebuffer_resized = false;
-
 };
-} // namespace juce 
+} // namespace juce
