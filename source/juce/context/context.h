@@ -29,10 +29,10 @@ public:
 
     bool initialize(HWND hwnd, HINSTANCE hinstance, uint32_t width, uint32_t height);
     void cleanup();
+    void draw_frame();
 
 private:
     vk_context m_context;
     swapchain m_swapchain;
 };
-
 } // namespace juce

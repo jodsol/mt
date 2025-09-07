@@ -10,6 +10,13 @@ bool context::initialize(HWND hwnd, HINSTANCE hinstance, uint32_t width, uint32_
     return true;
 }
 
+void context::draw_frame()
+{
+    // vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
+    return;
+}
+
 void context::cleanup()
 {
     m_swapchain.cleanup();
