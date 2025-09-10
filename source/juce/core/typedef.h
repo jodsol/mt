@@ -19,10 +19,4 @@ namespace juce
 class graphics_context;
 }
 
-// macro defines
-
-// clang-format off
-#define unused(x) (void)(x)
-#define safe_delete(p)      do { if(p){ delete (p); (p)=nullptr; } } while(0)
-#define safe_delete_array(p) do { if(p){ delete[](p); (p)=nullptr; } } while(0)
-// clang-format on
+#include "defines.h"
