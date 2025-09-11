@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
-#include "vk_hanle.h"
+#include "vk_handle.h"
 
 namespace juce
 {

@@ -124,7 +124,7 @@ int application::exec(void* scene)
 		update();
 		render();
 	}
-
+	// remove reource
 	safe_delete(m_context);
 
 	return static_cast<int>(msg.wParam);
