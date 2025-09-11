@@ -11,23 +11,19 @@ LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
 	application* app = nullptr;
 
-	if (msg == WM_NCCREATE)
-	{
+	if (msg == WM_NCCREATE) {
 		// On window creation, store the 'this' pointer passed from CreateWindowEx.
 		CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lp);
 		app                   = reinterpret_cast<application*>(pCreate->lpCreateParams);
 		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) app);
 	}
-	else
-	{
+	else {
 		// For other messages, retrieve the stored 'this' pointer.
 		app = reinterpret_cast<application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 	}
 
-	if (app)
-	{
-		switch (msg)
-		{
+	if (app) {
+		switch (msg) {
 			case WM_SIZE:
 			{
 				uint32_t width  = LOWORD(lp);
@@ -68,8 +64,7 @@ application::application(int args, char* argv[], int cx, int cy) :
 	wc.lpszClassName = "Juce Engine";
 	wc.hIcon         = 0;
 
-	if (!::RegisterClassExA(&wc))
-	{
+	if (!::RegisterClassExA(&wc)) {
 		assert(0 && "failed to registered class");
 		return;
 	}
@@ -110,18 +105,15 @@ application::application(int args, char* argv[], int cx, int cy) :
 application::~application()
 {
 	safe_delete(m_context);
-	safe_delete(m_hwnd);
+	::DestroyWindow(m_hwnd);
 }
 
 int application::exec(void* scene)
 {
 	MSG msg{};
-	while (msg.message != WM_QUIT)
-	{
-		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-		{
-			if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
-			{
+	while (msg.message != WM_QUIT) {
+		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+			if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
 				PostQuitMessage(0);
 			}
 			::TranslateMessage(&msg);

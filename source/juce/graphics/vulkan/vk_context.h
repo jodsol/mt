@@ -8,6 +8,7 @@
 namespace juce
 {
 class vk_instance;
+class vk_surface;
 class vk_context : public graphics_context
 {
 public:
@@ -15,9 +16,7 @@ public:
 
 	void on_resized(uint32 cx, uint32 cy) override;
 
-	VkInstance get_instance() const;
-
-	// vk_instance* m_instance{nullptr};
-	std::unique_ptr<vk_instance> m_instance;
+	vk_instance* m_instance{nullptr};
+	vk_surface*  m_surface{nullptr};
 };
 }        // namespace juce
