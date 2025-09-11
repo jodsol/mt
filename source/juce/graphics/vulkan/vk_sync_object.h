@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.h>
 #include <stdexcept>
 
+// test code
 struct 
  {
     VkSemaphore imageAvailableSemaphore;
