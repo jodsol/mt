@@ -1,9 +1,8 @@
 #include "logger.h"
+#include "config.h"
 #include <cstdio>
 #include <cstdarg>
-#ifdef _WIN32
-#include <Windows.h>
-#endif
+
 namespace juce
 {
 
