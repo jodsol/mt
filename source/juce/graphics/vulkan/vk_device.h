@@ -8,35 +8,51 @@
 
 namespace juce
 {
+// queue family result proxy
+struct queue_indices
+{
+	std::optional<uint32_t> graphics;
+	std::optional<uint32_t> present;
+	std::optional<uint32_t> compute;
+	std::optional<uint32_t> transfer;
+};
 
 struct vk_physical_device
 {
-	VkPhysicalDevice       m_physical_device    = VK_NULL_HANDLE;
-	int32_t                graphics_quque_index = -1;
-	int32_t                transfer_queue_index = -1;
-	std::optional<int32_t> graphics_index;
+	VkPhysicalDevice                 handle = VK_NULL_HANDLE;
+	queue_indices                    queue_indices;
+	VkQueueFlags                     flags{};        // flags of graphics family
+	VkPhysicalDeviceMemoryProperties memory_props{};        // heap,type ..etc info
+	VkPhysicalDeviceProperties       device_props{};        // gpu name, caps, driver info
 
-	operator VkPhysicalDevice()
+	operator VkPhysicalDevice() const
 	{
-		return m_physical_device;
+		return handle;
 	}
 };
 
 class vk_device : vk_handle<VkDevice>
 {
 public:
-	vk_device(
-	    VkInstance                      instance,
-	    VkSurfaceKHR                    surface,
-	    const std::vector<const char*>& extension);
+	vk_device(VkInstance instance, VkSurfaceKHR surface);
 	~vk_device();
 
-	VkPhysicalDevice choose_physical_device(
-	    VkInstance                      instance,
-	    VkSurfaceKHR                    surface,
-	    const std::vector<const char*>& extension);
+	void create_device(VkInstance instance, VkSurfaceKHR surface);
+
+	bool choose_physical_device(VkInstance instance, VkSurfaceKHR surface, vk_physical_device* pp_gpu);
+
+	void create_logical_device(VkSurfaceKHR surface);
+
+	void print_vk_logical_device();
+
+protected:
+	static void print_vk_physical_device(const vk_physical_device& gpu);
 
 private:
 	vk_physical_device m_gpu{};
+	VkQueue            m_graphics_queue = VK_NULL_HANDLE;
+	VkQueue            m_present_queue  = VK_NULL_HANDLE;
+	VkQueue            m_compute_queue  = VK_NULL_HANDLE;
+	VkQueue            m_transfer_queue = VK_NULL_HANDLE;
 };
 }        // namespace juce
