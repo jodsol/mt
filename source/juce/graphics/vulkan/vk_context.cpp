@@ -15,7 +15,7 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, void* platform_handle) :
 	log_info("Juce-Engine : Vulkan API ver %d.%d.%d\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 
 	// required instance extensions
-	std::vector<const char*> required_instance_extensions = {
+	std::vector<const char*> required_extensions = {
 #ifdef _WIN32
 	    VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #elif defined(__linux__)
@@ -25,24 +25,17 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, void* platform_handle) :
 	    VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 	    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
 
-	std::vector<const char*> required_instance_layers = {
+	std::vector<const char*> required_layers = {
 #ifdef _DEBUG
 	    "VK_LAYER_KHRONOS_validation"
 #endif
 	};
 
-	m_instance = debug_new vk_instance(JUCE_ENGINE_NAME,
-	                                   required_instance_extensions,
-	                                   required_instance_layers);
+	m_instance = debug_new vk_instance(JUCE_ENGINE_NAME, required_extensions, required_layers);
 
-	// m_surface = std::make_unique<vk_surface>(m_instance->handle(), platform_handle);
 	m_surface = debug_new vk_surface(m_instance->handle(), platform_handle);
 
-	const std::vector<const char*> device_extension = {
-
-	};
-
-	m_device = debug_new vk_device(m_instance->handle(), m_surface->handle(), device_extension);
+	m_device = debug_new vk_device(m_instance->handle(), m_surface->handle());
 }
 
 vk_context::~vk_context()
