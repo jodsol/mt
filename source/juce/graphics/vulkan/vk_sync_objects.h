@@ -22,7 +22,7 @@ public:
 
 private:
     VkDevice m_device;
-    uint32_t m_max_frames_inflight = JUCE_MAX_SYNCV_FRAME;
+    uint32_t m_max_frames_inflight = MAX_SYNCV_FRAME;
 
     std::vector<VkSemaphore> m_image_available_semaphores;
     std::vector<VkSemaphore> m_render_finished_semaphores;

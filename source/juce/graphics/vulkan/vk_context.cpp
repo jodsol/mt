@@ -32,7 +32,7 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 #endif
 	};
 
-	m_instance = debug_new vk_instance(JUCE_ENGINE_NAME, required_extensions, required_layers);
+	m_instance = debug_new vk_instance(ENGINE_NAME, required_extensions, required_layers);
 
 	m_surface = debug_new vk_surface(m_instance->handle(), platform_handle);
 
