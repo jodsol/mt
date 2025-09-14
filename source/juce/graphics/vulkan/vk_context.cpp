@@ -37,6 +37,8 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 	m_surface = debug_new vk_surface(m_instance->handle(), platform_handle);
 
 	m_device = debug_new vk_device(m_instance->handle(), m_surface->handle());
+
+	m_swapchain = debug_new vk_swapchain(m_device, 0, 0);
 }
 
 vk_context::~vk_context()

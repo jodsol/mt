@@ -4,8 +4,8 @@
 namespace juce
 {
 
-vk_swapchain::vk_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, uint32_t cx, uint32_t cy) :
-    m_physical_device(physical_device), m_device(device), m_surface(surface),
+vk_swapchain::vk_swapchain(vk_device* device, uint32_t cx, uint32_t cy) :
+    m_physical_device(device->get_gpu()), m_device(device), m_surface(device->get_surface()),
 {
 }
 

@@ -31,7 +31,7 @@ struct vk_physical_device
 	}
 };
 
-class vk_device : vk_handle<VkDevice>
+class vk_device : public vk_handle<VkDevice>
 {
 public:
 	vk_device(VkInstance instance, VkSurfaceKHR surface);
@@ -45,11 +45,16 @@ public:
 
 	void print_vk_logical_device();
 
+	VkSurfaceKHR get_surface() {
+		return m_surface;
+	}
+
 protected:
 	static void print_vk_physical_device(const vk_physical_device& gpu);
 
 private:
 	vk_physical_device m_gpu{};
+	VkSurfaceKHR       m_surface = VK_NULL_HANDLE;
 	VkQueue            m_graphics_queue = VK_NULL_HANDLE;
 	VkQueue            m_present_queue  = VK_NULL_HANDLE;
 	VkQueue            m_compute_queue  = VK_NULL_HANDLE;
