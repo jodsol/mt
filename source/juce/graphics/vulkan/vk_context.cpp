@@ -7,7 +7,7 @@
 
 namespace juce
 {
-vk_context::vk_context(uint32_t cx, uint32_t cy, void* platform_handle) :
+vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle) :
     graphics_context(cx, cy, platform_handle)
 {
 	uint32_t version = VK_HEADER_VERSION_COMPLETE;
