@@ -5,6 +5,7 @@
 #include "vk_surface.h"
 #include "vk_device.h"
 #include "vk_swapchain.h"
+#include "vk_sync_objects.h"
 
 namespace juce
 {
@@ -38,11 +39,19 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 
 	m_device = debug_new vk_device(m_instance->handle(), m_surface->handle());
 
-	m_swapchain = debug_new vk_swapchain(m_device, 0, 0);
+	m_swapchain = debug_new vk_swapchain(m_device, cx, cy);
+
+	m_sync = debug_new vk_sync_objects(m_device->handle());
+
+	// TODO
+
+	int g = 0;
 }
 
 vk_context::~vk_context()
 {
+	safe_delete(m_sync);
+	safe_delete(m_swapchain);
 	safe_delete(m_device);
 	safe_delete(m_surface);
 	safe_delete(m_instance);

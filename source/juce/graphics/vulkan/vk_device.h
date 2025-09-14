@@ -45,8 +45,14 @@ public:
 
 	void print_vk_logical_device();
 
-	VkSurfaceKHR get_surface() {
+	const VkSurfaceKHR get_surface() const
+	{
 		return m_surface;
+	}
+
+	const vk_physical_device* get_gpu() const
+	{
+		return &m_gpu;
 	}
 
 protected:
@@ -54,7 +60,7 @@ protected:
 
 private:
 	vk_physical_device m_gpu{};
-	VkSurfaceKHR       m_surface = VK_NULL_HANDLE;
+	VkSurfaceKHR       m_surface        = VK_NULL_HANDLE;
 	VkQueue            m_graphics_queue = VK_NULL_HANDLE;
 	VkQueue            m_present_queue  = VK_NULL_HANDLE;
 	VkQueue            m_compute_queue  = VK_NULL_HANDLE;

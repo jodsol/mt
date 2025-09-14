@@ -2,7 +2,8 @@
 
 namespace juce
 {
-vk_device::vk_device(VkInstance instance, VkSurfaceKHR surface)
+vk_device::vk_device(VkInstance instance, VkSurfaceKHR surface) :
+    m_surface(surface)
 {
 	create_device(instance, surface);
 }

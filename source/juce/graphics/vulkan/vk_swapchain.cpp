@@ -1,12 +1,18 @@
 #include "vk_swapchain.h"
 #include <algorithm>
+#include "vk_device.h"
 
 namespace juce
 {
 
-vk_swapchain::vk_swapchain(vk_device* device, uint32_t cx, uint32_t cy) :
-    m_physical_device(device->get_gpu()), m_device(device), m_surface(device->get_surface()),
+vk_swapchain::vk_swapchain(const vk_device* device, uint32_t cx, uint32_t cy) :
+    m_physical_device(*device->get_gpu()),
+    m_device(device->handle()),
+    m_surface(device->get_surface())
 {
+	create_swapchain(cx, cy);
+
+	int a = 0;
 }
 
 vk_swapchain::~vk_swapchain()
@@ -184,7 +190,7 @@ VkPresentModeKHR vk_swapchain::choose_swap_present_mode(const std::vector<VkPres
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t cur_width, uint32_t cur_height)
+VkExtent2D vk_swapchain::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t cur_width, uint32_t cur_height)
 {
 	VkExtent2D extent;
 	if (capabilities.currentExtent.width != UINT32_MAX) {
