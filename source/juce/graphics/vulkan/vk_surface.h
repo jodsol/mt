@@ -1,5 +1,6 @@
 #pragma once
 
+#include <juce/core/typedef.h>
 #include "vk_config.h"
 #include "vk_handle.h"
 #include <vector>

@@ -3,8 +3,8 @@
 // macro defines
 
 // juce engine
-#define JUCE_ENGINE_NAME "Juce Engine"
-#define JUCE_MAX_SYNCV_FRAME 2
+#define ENGINE_NAME "Juce Engine"
+#define MAX_SYNCV_FRAME 2
 
 // clang-format off
 #define unused(x) (void)(x)

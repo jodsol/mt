@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vk_config.h"
+#include <juce/core/typedef.h>
 #include <juce/graphics/context.h>
 #include <memory>
 #include <vector>
@@ -10,6 +11,7 @@ namespace juce
 class vk_instance;
 class vk_surface;
 class vk_device;
+class vk_swapchain;
 class vk_context : public graphics_context
 {
 public:
@@ -20,5 +22,6 @@ public:
 	vk_instance* m_instance{nullptr};
 	vk_surface*  m_surface{nullptr};
 	vk_device*   m_device{};
+	vk_swapchain*   m_swapchain{nullptr};
 };
 }        // namespace juce
