@@ -18,7 +18,7 @@ struct SwapChainSupportDetails {
 class vk_swapchain: vk_handle<VkSwapchainKHR> 
 {
 public:
-	vk_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface);
+	vk_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, uint32_t cx, uint32_t cy);
 	~vk_swapchain();
      
 	bool create_swapchain(uint32_t width, uint32_t height);
