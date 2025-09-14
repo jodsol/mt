@@ -2,6 +2,7 @@
 #include "config.h"
 #include <cstdio>
 #include <cstdarg>
+#include <stdlib.h>
 
 namespace juce
 {
@@ -70,6 +71,9 @@ void logger::log(level level, const char* code, ...)
 	va_start(args, code);
 	std::vsnprintf(buffer, sizeof(buffer), code, args);
 	va_end(args);
+
+	if (level = error) {
+	}
 
 	auto ansi_color = level_color(level);
 	auto level_str  = level_string(level);

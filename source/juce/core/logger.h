@@ -10,25 +10,25 @@ namespace juce
 class logger
 {
 public:
-    enum level
-    {
-        info,
-        debug,
-        warn,
-        error
-    };
-    inline static logger* get_instance()
-    {
-        static logger instance;
-        return &instance;
-    }
-    void log(level level, const char* code, ...);
+	enum level
+	{
+		info,
+		debug,
+		warn,
+		error
+	};
+	inline static logger* get_instance()
+	{
+		static logger instance;
+		return &instance;
+	}
+	void log(level level, const char* code, ...);
 
 private:
-    logger();
-    ~logger() = default;
+	logger();
+	~logger() = default;
 
-    logger(const logger&) = delete;
-    logger& operator=(const logger&) = delete;
+	logger(const logger&)            = delete;
+	logger& operator=(const logger&) = delete;
 };
-} // namespace juce
+}        // namespace juce

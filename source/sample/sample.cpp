@@ -4,6 +4,7 @@
 
 int main(int args, char* argv[])
 {
+	check_mem_leak();
 	juce::application app(args, argv, 1024, 760);
 
 	auto code = app.exec(nullptr);

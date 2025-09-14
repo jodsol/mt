@@ -8,10 +8,6 @@
 
 namespace juce
 {
-class vk_instance;
-class vk_surface;
-class vk_device;
-class vk_swapchain;
 class vk_context : public graphics_context
 {
 public:
@@ -19,9 +15,21 @@ public:
 	~vk_context();
 	void on_resized(uint32 cx, uint32 cy) override;
 
-	vk_instance* m_instance{nullptr};
-	vk_surface*  m_surface{nullptr};
-	vk_device*   m_device{};
-	vk_swapchain*   m_swapchain{nullptr};
+	vk_instance*     m_instance{nullptr};
+	vk_surface*      m_surface{nullptr};
+	vk_device*       m_device{nullptr};
+	vk_swapchain*    m_swapchain{nullptr};
+	vk_sync_objects* m_sync{nullptr};
+
+	// VkCommandBuffer m_cmd[MAX_SYNC_FRAME];
+	// VkCommandPool   m_cmd_pool[MAX_SYNC_FRAME];
+
+	struct frame_object
+	{
+		VkCommandBuffer m_cmd;
+		VkCommandPool   m_cmd_pool;
+	};
+
+	frame_object frames[MAX_SYNC_FRAME];
 };
 }        // namespace juce

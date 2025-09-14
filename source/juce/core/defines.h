@@ -4,7 +4,7 @@
 
 // juce engine
 #define ENGINE_NAME "Juce Engine"
-#define MAX_SYNCV_FRAME 2
+#define MAX_SYNC_FRAME 2
 
 // clang-format off
 #define unused(x) (void)(x)
@@ -15,10 +15,17 @@
 #if defined(_DEBUG) && defined(_MSC_VER) 
 #include <crtdbg.h>
 #define debug_new new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#define check_mem_leak() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
 #else
+#define check_mem_leak() (void)x
 #define debug_new new
 #endif
 
 // clang-format on
 
 #include "logger.h"
+
+// #ifdef _DEBUG
+//     // 프로그램 종료 시점에 메모리 릭 리포트 출력
+//     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+// #endif
