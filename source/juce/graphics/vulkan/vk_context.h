@@ -13,7 +13,7 @@ class vk_device;
 class vk_context : public graphics_context
 {
 public:
-	vk_context(uint32_t cx, uint32_t cy, void* platform_handle);
+	vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle);
 	~vk_context();
 	void on_resized(uint32 cx, uint32 cy) override;
 

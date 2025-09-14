@@ -9,7 +9,7 @@ namespace juce
 class vk_surface : public vk_handle<VkSurfaceKHR>
 {
 public:
-	vk_surface(VkInstance instance, void* plaform_handle);
+	vk_surface(VkInstance instance, platform_handle plaform_handle);
 	~vk_surface();
 
 	bool valid() const;

@@ -38,6 +38,26 @@
 		}                                                                           \
 	} while (0)
 
+
+// platform
+
+#ifdef _WIN32
+using win_handle = HWND;
+#elif defined(__linux__)
+using xcb_handle = xcb_window_t;
+#elif defined(__APPLE__)
+using mac_handle = void*; // MoltenVK에서는 NSView*나 CAMetalLayer*를 사용
+#endif
+
+using platform_handle =
+#ifdef _WIN32
+    win_handle;
+#elif defined(__linux__)
+    xcb_handle;
+#elif defined(__APPLE__)
+    mac_handle;
+#endif
+
 // define template
 template <typename T>
 struct VkDestroyFn;
@@ -193,6 +213,8 @@ inline const char* vk_error_to_str(VkResult result)
 // }
 
 #include <iostream>
+
+constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3; // triple buffering
 
 inline VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_message_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,

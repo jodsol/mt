@@ -1,7 +1,5 @@
 #include "vk_swapchain.h"
-#include <stdexcept>
 #include <algorithm>
-#include <windows.h>
 
 namespace juce
 {
@@ -59,14 +57,11 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
     create_info.oldSwapchain = VK_NULL_HANDLE;
 
     // 5. 스왑체인 생성
-    VkResult result = vkCreateSwapchainKHR(m_device,
+    VK(vkCreateSwapchainKHR(m_device,
                                            &create_info,
                                            nullptr,
-                                           &m_handle);
-    if (result != VK_SUCCESS) {
-        printf("Failed to create swapchain!");
-        return false;
-    }
+                                           &m_handle));
+    
 
     // 6. 이미지 가져오기
     vkGetSwapchainImagesKHR(m_device, m_handle, &image_count, nullptr);
@@ -83,8 +78,8 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
 }
 
 void vk_swapchain::recreate_swapchain(uint32_t cur_width, uint32_t cur_height) {
-        while (cur_width == 0 || cur_height == 0) {
-            printf("error");
+        if (cur_width == 0 || cur_height == 0) {
+            return;
         }
 
         vkDeviceWaitIdle(m_device);
@@ -92,6 +87,7 @@ void vk_swapchain::recreate_swapchain(uint32_t cur_width, uint32_t cur_height) {
         destroy_swapchain();
 
         create_swapchain(cur_width, cur_height);
+        
 }
 
 void vk_swapchain::create_image_views() {
@@ -115,9 +111,7 @@ VkImageView vk_swapchain::create_image_view(VkImage image, VkFormat format) {
     view_info.subresourceRange.layerCount = 1;
 
     VkImageView image_view;
-    if (vkCreateImageView(m_device, &view_info, nullptr, &image_view) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture image view!");
-    }
+    VK(vkCreateImageView(m_device, &view_info, nullptr, &image_view));
 
     return image_view;
 }

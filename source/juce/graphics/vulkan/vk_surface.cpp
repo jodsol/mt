@@ -2,13 +2,13 @@
 
 namespace juce
 {
-vk_surface::vk_surface(VkInstance instance, void* plaform_handle) :
+vk_surface::vk_surface(VkInstance instance, platform_handle plaform_handle) :
     m_instance(instance)
 {
 #if defined(_WIN32)
 	VkWin32SurfaceCreateInfoKHR info{VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
 	info.hinstance = GetModuleHandle(nullptr);
-	info.hwnd      = static_cast<HWND>(plaform_handle);
+	info.hwnd      = plaform_handle;
 	VK(vkCreateWin32SurfaceKHR(m_instance, &info, nullptr, &m_handle));
 #else
 	// TODO linux macos other platform
