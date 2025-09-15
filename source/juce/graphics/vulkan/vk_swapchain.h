@@ -26,6 +26,11 @@ public:
 	bool destroy_swapchain();
 	void recreate_swapchain(uint32_t cur_width, uint32_t cur_height);
 
+	const std::vector<VkImage>& get_images() const { return m_swapchain_images; }
+    const std::vector<VkImageView>& get_image_views() const { return m_swapchain_image_views; }
+    VkExtent2D extent() const { return m_swapchain_extent; }
+
+
 private:
 	VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
 	VkDevice         m_device          = VK_NULL_HANDLE;

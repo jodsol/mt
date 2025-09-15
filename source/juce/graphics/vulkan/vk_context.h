@@ -22,8 +22,7 @@ public:
 
     void on_resized(uint32 cx, uint32 cy) override;
 
-    void create_command_objects();
-    void destroy_command_objects();
+	void draw_frame() override;
 
     vk_instance*     m_instance{nullptr};
     vk_surface*      m_surface{nullptr};
@@ -38,5 +37,13 @@ public:
     };
 
     frame_object frames[MAX_SYNC_FRAME];
+
+private:
+    uint32_t m_frame_number = 0;
+
+    void create_command_objects();
+    void destroy_command_objects();
+	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags);
+	void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
 };
 } // namespace juce
