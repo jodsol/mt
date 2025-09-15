@@ -9,14 +9,13 @@
 
 namespace juce
 {
-vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle) :
-    graphics_context(cx, cy, platform_handle)
+vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle) : graphics_context(cx, cy, platform_handle)
 {
 	uint32_t version = VK_HEADER_VERSION_COMPLETE;
 
-	log_info("Juce-Engine : Vulkan API ver %d.%d.%d\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
+	log_info("Juce-Engine : Vulkan API ver %d.%d.%d\n",
+	         VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 
-	// required instance extensions
 	std::vector<const char*> required_extensions = {
 #ifdef _WIN32
 	    VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
@@ -33,23 +32,20 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 #endif
 	};
 
-	m_instance = debug_new vk_instance(ENGINE_NAME, required_extensions, required_layers);
-
-	m_surface = debug_new vk_surface(m_instance->handle(), platform_handle);
-
-	m_device = debug_new vk_device(m_instance->handle(), m_surface->handle());
-
+	m_instance  = debug_new  vk_instance(ENGINE_NAME, required_extensions, required_layers);
+	m_surface   = debug_new   vk_surface(m_instance->handle(), platform_handle);
+	m_device    = debug_new    vk_device(m_instance->handle(), m_surface->handle());
 	m_swapchain = debug_new vk_swapchain(m_device, cx, cy);
+	m_sync      = debug_new      vk_sync_objects(m_device->handle());
 
-	m_sync = debug_new vk_sync_objects(m_device->handle());
-
-	// TODO
-
-	int g = 0;
+	// Command Pool + Buffer 생성
+	create_command_objects();
 }
 
 vk_context::~vk_context()
 {
+	destroy_command_objects();
+
 	safe_delete(m_sync);
 	safe_delete(m_swapchain);
 	safe_delete(m_device);
@@ -61,6 +57,214 @@ void vk_context::on_resized(uint32 cx, uint32 cy)
 {
 	unused(cx);
 	unused(cy);
+}
+
+// Command Buffer reset → vkBeginCommandBuffer → 이미지 레이아웃 전환 & clear → vkEndCommandBuffer → vkQueueSubmit → vkQueuePresentKHR
+void vk_context::draw_frame()
+{
+	static uint32_t current_frame = 0;
+	frame_object&   frame         = frames[current_frame];
+
+	// --- draw_1: GPU가 이전 프레임 끝날 때까지 대기
+	VkFence fence = m_sync->get_inflight_fence(current_frame);
+	vkWaitForFences(m_device->handle(), 1, &fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(m_device->handle(), 1, &fence);
+
+	// --- draw_2: Swapchain 이미지 요청
+	uint32_t image_index;
+	VK(vkAcquireNextImageKHR(
+	    m_device->handle(),
+	    m_swapchain->handle(),
+	    UINT64_MAX,
+	    m_sync->get_image_available_semaphore(current_frame),
+	    VK_NULL_HANDLE,
+	    &image_index));
+
+	// --- draw_3: Command Buffer reset & begin
+	VkCommandBuffer cmd = frame.m_cmd;
+	vkResetCommandBuffer(cmd, 0);
+
+	VkCommandBufferBeginInfo begin_info = command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	VK(vkBeginCommandBuffer(cmd, &begin_info));
+
+	// --- draw_4: 이미지 레이아웃 전환 + clear + 다시 present용으로 전환
+	VkImage swap_image = m_swapchain->get_images()[image_index];
+	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+	VkClearColorValue clear_value;
+	float             flash = std::abs(std::sin(m_frame_number / 120.f));
+	clear_value             = {{flash, flash, flash, flash}};
+
+	VkImageSubresourceRange clear_range{};
+	clear_range.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+	clear_range.baseMipLevel   = 0;
+	clear_range.levelCount     = 1;
+	clear_range.baseArrayLayer = 0;
+	clear_range.layerCount     = 1;
+
+	vkCmdClearColorImage(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range);
+
+	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+	VK(vkEndCommandBuffer(cmd));
+
+	// --- draw_5: Command Buffer 제출
+	VkSubmitInfo submit_info{};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore          wait_semaphore   = m_sync->get_image_available_semaphore(current_frame);
+	VkSemaphore          signal_semaphore = m_sync->get_render_finished_semaphore(current_frame);
+	VkPipelineStageFlags wait_stage       = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	submit_info.waitSemaphoreCount   = 1;
+	submit_info.pWaitSemaphores      = &wait_semaphore;
+	submit_info.pWaitDstStageMask    = &wait_stage;
+	submit_info.commandBufferCount   = 1;
+	submit_info.pCommandBuffers      = &cmd;
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores    = &signal_semaphore;
+
+	VK(vkQueueSubmit(m_device->graphics_queue(), 1, &submit_info, fence));
+
+	// --- draw_6: Present
+	VkPresentInfoKHR present_info{};
+	present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores    = &signal_semaphore;
+	VkSwapchainKHR swapchains[]     = {m_swapchain->handle()};
+	present_info.swapchainCount     = 1;
+	present_info.pSwapchains        = swapchains;
+	present_info.pImageIndices      = &image_index;
+
+	VK(vkQueuePresentKHR(m_device->present_queue(), &present_info));
+
+	m_frame_number++;
+	current_frame = (current_frame + 1) % MAX_SYNC_FRAME;
+}
+
+void vk_context::create_command_objects()
+{
+	VkDevice device                = m_device->handle();
+	uint32_t graphics_queue_family = m_device->graphics_queue_family_index();
+
+	for (uint32_t i = 0; i < MAX_SYNC_FRAME; i++) {
+		// Command Pool 생성
+		VkCommandPoolCreateInfo pool_info{};
+		pool_info.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		pool_info.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		pool_info.queueFamilyIndex = graphics_queue_family;
+
+		if (vkCreateCommandPool(device, &pool_info, nullptr, &frames[i].m_cmd_pool) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create command pool!");
+		}
+
+		// Command Buffer 할당
+		VkCommandBufferAllocateInfo alloc_info{};
+		alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		alloc_info.commandPool        = frames[i].m_cmd_pool;
+		alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		alloc_info.commandBufferCount = 1;
+
+		if (vkAllocateCommandBuffers(device, &alloc_info, &frames[i].m_cmd) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate command buffer!");
+		}
+	}
+}
+
+void vk_context::destroy_command_objects()
+{
+	VkDevice device = m_device->handle();
+
+	for (uint32_t i = 0; i < MAX_SYNC_FRAME; i++) {
+		if (frames[i].m_cmd != VK_NULL_HANDLE) {
+			vkFreeCommandBuffers(device, frames[i].m_cmd_pool, 1, &frames[i].m_cmd);
+			frames[i].m_cmd = VK_NULL_HANDLE;
+		}
+
+		if (frames[i].m_cmd_pool != VK_NULL_HANDLE) {
+			vkDestroyCommandPool(device, frames[i].m_cmd_pool, nullptr);
+			frames[i].m_cmd_pool = VK_NULL_HANDLE;
+		}
+	}
+}
+
+VkCommandBufferBeginInfo vk_context::command_buffer_begin_info(VkCommandBufferUsageFlags flags)
+{
+	VkCommandBufferBeginInfo info{};
+	info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	info.pNext            = nullptr;
+	info.flags            = flags;        // 한 번만 사용할 CommandBuffer라면
+	info.pInheritanceInfo = nullptr;        // secondary command buffer가 아니므로 nullptr
+	return info;
+}
+
+void vk_context::transition_image(VkCommandBuffer cmd, VkImage image,
+                                  VkImageLayout oldLayout, VkImageLayout newLayout)
+{
+	VkImageMemoryBarrier barrier{};
+	barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext               = nullptr;
+	barrier.oldLayout           = oldLayout;
+	barrier.newLayout           = newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image               = image;
+
+	// subresource range 설정
+	barrier.subresourceRange.baseMipLevel   = 0;
+	barrier.subresourceRange.levelCount     = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount     = 1;
+
+	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	}
+	else {
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+
+	// 접근 마스크 (Access Masks)
+	VkPipelineStageFlags srcStage = 0;
+	VkPipelineStageFlags dstStage = 0;
+
+	switch (oldLayout) {
+		case VK_IMAGE_LAYOUT_UNDEFINED:
+			barrier.srcAccessMask = 0;
+			srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			srcStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			break;
+		default:
+			barrier.srcAccessMask = 0;
+			srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			break;
+	}
+
+	switch (newLayout) {
+		case VK_IMAGE_LAYOUT_GENERAL:
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			dstStage              = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			break;
+		default:
+			barrier.dstAccessMask = 0;
+			dstStage              = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			break;
+	}
+
+	vkCmdPipelineBarrier(
+	    cmd,
+	    srcStage,
+	    dstStage,
+	    0,
+	    0, nullptr,
+	    0, nullptr,
+	    1, &barrier);
 }
 
 }        // namespace juce

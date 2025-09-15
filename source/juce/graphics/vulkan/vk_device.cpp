@@ -174,6 +174,32 @@ bool vk_device::choose_physical_device(VkInstance instance, VkSurfaceKHR surface
 	return true;
 }
 
+uint32_t vk_device::graphics_queue_family_index() const
+{
+	assert(m_gpu.queue_indices.graphics.has_value() && "Graphics queue family not available!");
+	return *m_gpu.queue_indices.graphics;
+}
+
+uint32_t vk_device::present_queue_family_index() const
+{
+	assert(m_gpu.queue_indices.present.has_value() && "Present queue family not available!");
+	return *m_gpu.queue_indices.present;
+}
+
+uint32_t vk_device::compute_queue_family_index() const
+{
+	if (m_gpu.queue_indices.compute.has_value())
+		return *m_gpu.queue_indices.compute;
+	return graphics_queue_family_index();
+}
+
+uint32_t vk_device::transfer_queue_family_index() const
+{
+	if (m_gpu.queue_indices.transfer.has_value())
+		return *m_gpu.queue_indices.transfer;
+	return graphics_queue_family_index();
+}
+
 void vk_device::create_logical_device(VkSurfaceKHR surface)
 {
 	assert(m_gpu.handle != VK_NULL_HANDLE);

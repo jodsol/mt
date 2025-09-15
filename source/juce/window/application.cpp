@@ -137,6 +137,9 @@ void application::update()
 
 void application::render()
 {
+	if (m_context) {
+		m_context->draw_frame();
+	}
 }
 
 void application::on_window_resized(uint32_t width, uint32_t height)
