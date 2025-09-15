@@ -45,6 +45,11 @@ public:
 
 	void print_vk_logical_device();
 
+    uint32_t graphics_queue_family_index() const;
+    uint32_t present_queue_family_index() const;
+    uint32_t compute_queue_family_index() const;
+    uint32_t transfer_queue_family_index() const;
+
 	const VkSurfaceKHR get_surface() const
 	{
 		return m_surface;
