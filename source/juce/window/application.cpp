@@ -6,45 +6,6 @@
 
 namespace juce
 {
-LRESULT WINAPI troll_wnd(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
-{
-	application* app = nullptr;
-
-	if(msg == WM_NCCREATE) {
-		// On window creation, store the 'this' pointer passed from CreateWindowEx.
-		CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lp);
-		app                   = reinterpret_cast<application*>(pCreate->lpCreateParams);
-		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) app);
-	}
-	else {
-		// For other messages, retrieve the stored 'this' pointer.
-		app = reinterpret_cast<application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-	}
-
-	if(app) {
-		switch(msg) {
-			case WM_SIZE:
-			{
-				uint32_t width  = LOWORD(lp);
-				uint32_t height = HIWORD(lp);
-				app->on_window_resized(width, height);
-				break;
-			}
-			case WM_DESTROY:
-			{
-				PostQuitMessage(0);
-				break;
-			}
-			default:
-			{
-				return ::DefWindowProc(hwnd, msg, wp, lp);
-			}
-		}
-		return 0;
-	}
-
-	return ::DefWindowProc(hwnd, msg, wp, lp);
-}
 
 application::application(int args, char* argv[], int cx, int cy) :
     m_hwnd(nullptr), m_context(nullptr)

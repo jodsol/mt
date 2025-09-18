@@ -8,12 +8,6 @@
 
 namespace juce
 {
-class vk_instance;
-class vk_surface;
-class vk_device;
-class vk_swapchain;
-class vk_sync_objects;
-
 class vk_context : public graphics_context
 {
 public:
@@ -26,11 +20,11 @@ public:
 	void begin_frame();
 	void end_frame();
 
-	vk_instance*     m_instance{nullptr};
-	vk_surface*      m_surface{nullptr};
-	vk_device*       m_device{nullptr};
-	vk_swapchain*    m_swapchain{nullptr};
-	vk_sync_objects* m_sync{nullptr};
+	vk_instance*  m_instance{nullptr};
+	vk_surface*   m_surface{nullptr};
+	vk_device*    m_device{nullptr};
+	vk_swapchain* m_swapchain{nullptr};
+	vk_sync*      m_sync{nullptr};
 
 	struct frame_object
 	{
@@ -38,9 +32,9 @@ public:
 		VkCommandPool   m_cmd_pool{VK_NULL_HANDLE};
 	};
 
-	frame_object     frames[MAX_SYNC_FRAME];
-	uint32_t         current_frame() const;
-	virtual uint32_t swapchain_frame() const;
+	frame_object frames[MAX_SYNC_FRAME];
+	uint32_t     current_frame() const override;
+	uint32_t     swapchain_frame() const override;
 
 private:
 	uint32_t m_frame_number          = 0;

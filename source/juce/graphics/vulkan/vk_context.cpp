@@ -5,7 +5,7 @@
 #include "vk_surface.h"
 #include "vk_device.h"
 #include "vk_swapchain.h"
-#include "vk_sync_objects.h"
+#include "vk_sync.h"
 
 namespace juce
 {
@@ -37,7 +37,7 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 	m_surface   = debug_new   vk_surface(m_instance->handle(), platform_handle);
 	m_device    = debug_new    vk_device(m_instance->handle(), m_surface->handle());
 	m_swapchain = debug_new vk_swapchain(m_device, cx, cy);
-	m_sync      = debug_new      vk_sync_objects(m_device->handle());
+	m_sync      = debug_new      vk_sync(m_device->handle());
 
 	// Command Pool + Buffer 생성
 	create_command_objects();
@@ -147,6 +147,10 @@ void vk_context::draw_frame()
 }
 
 void vk_context::begin_frame()
+{
+}
+
+void vk_context::end_frame()
 {
 }
 
