@@ -11,33 +11,28 @@
 #define VK_DEFAULT_FENCE_TIMEOUT 100000000000
 
 #define vk_load_instance_func(device, func)                             \
-	do                                                                  \
-	{                                                                   \
+	do {                                                                \
 		func = (PFN_##func) vkGetInstanceProcAddr(device, #func);       \
 		assert(func && "Failed to load device-level function: " #func); \
-	} while (0)
+	} while(0)
 
 #define vk_load_device_func(device, func)                               \
-	do                                                                  \
-	{                                                                   \
+	do {                                                                \
 		func = (PFN_##func) vkGetDeviceProcAddr(device, #func);         \
 		assert(func && "Failed to load device-level function: " #func); \
-	} while (0)
+	} while(0)
 
 #define VK(res)                                                                     \
-	do                                                                              \
-	{                                                                               \
+	do {                                                                            \
 		VkResult r = (res);                                                         \
-		if (r != VK_SUCCESS)                                                        \
-		{                                                                           \
+		if(r != VK_SUCCESS) {                                                       \
 			std::string msg = "file: " + std::string(__FILE__) +                    \
-			                  "\nline: " + std::to_string(__LINE__) +               \
-			                  "\ncode: " + vk_error_to_str(r);                      \
+			    "\nline: " + std::to_string(__LINE__) +                             \
+			    "\ncode: " + vk_error_to_str(r);                                    \
 			MessageBoxA(nullptr, msg.c_str(), "Fatal Error", MB_OK | MB_ICONERROR); \
 			exit(EXIT_FAILURE);                                                     \
 		}                                                                           \
-	} while (0)
-
+	} while(0)
 
 // platform
 
@@ -46,7 +41,7 @@ using win_handle = HWND;
 #elif defined(__linux__)
 using xcb_handle = xcb_window_t;
 #elif defined(__APPLE__)
-using mac_handle = void*; // MoltenVK에서는 NSView*나 CAMetalLayer*를 사용
+using mac_handle = void*;        // MoltenVK에서는 NSView*나 CAMetalLayer*를 사용
 #endif
 
 using platform_handle =
@@ -87,8 +82,7 @@ reg_vk_destroy_fn(VkImageView, vkDestroyImageView);
 template <typename T>
 inline void __vk_safe_destroy(VkDevice device, T& handle)
 {
-	if (handle != VK_NULL_HANDLE)
-	{
+	if(handle != VK_NULL_HANDLE) {
 		VkDestroyFn<T>::deleter(device, handle);
 		handle = VK_NULL_HANDLE;
 	}
@@ -102,8 +96,7 @@ inline static PFN_vkCreateDebugUtilsMessengerEXT _vkCreateDebugUtilsMessengerEXT
 
 inline const char* vk_error_to_str(VkResult result)
 {
-	switch (result)
-	{
+	switch(result) {
 		case VK_SUCCESS:
 			return "VK_SUCCESS";
 		case VK_NOT_READY:
@@ -214,8 +207,6 @@ inline const char* vk_error_to_str(VkResult result)
 
 #include <iostream>
 
-constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3; // triple buffering
-
 inline VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_message_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
     VkDebugUtilsMessageTypeFlagsEXT /*message_type*/,
@@ -225,23 +216,19 @@ inline VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_message_callback(
 	const char* severity = "";
 	const char* color    = "\033[0m";        // reset
 
-	if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
-	{
+	if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
 		severity = "VERBOSE";
 		color    = "\033[36m";
 	}
-	else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-	{
+	else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
 		severity = "INFO";
 		color    = "\033[32m";
 	}
-	else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-	{
+	else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
 		severity = "WARNING";
 		color    = "\033[33m";
 	}
-	else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-	{
+	else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
 		severity = "ERROR";
 		color    = "\033[31m";
 	}
