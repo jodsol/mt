@@ -6,9 +6,9 @@ namespace juce
 {
 
 vk_swapchain::vk_swapchain(const vk_device* device, uint32_t cx, uint32_t cy) :
-    m_physical_device(*device->get_gpu()),
+    m_physical_device(device->get_gpu()->handle),
     m_device(device->handle()),
-    m_surface(device->get_surface())
+    m_surface(device->surface())
 {
 	create_swapchain(cx, cy);
 
@@ -44,7 +44,8 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
 	create_info.imageColorSpace  = surface_format.colorSpace;
 	create_info.imageExtent      = extent;
 	create_info.imageArrayLayers = 1;
-	create_info.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	create_info.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+	                         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 	// 4. Queue family 설정 필요 (graphicsFamily, presentFamily)
 	uint32_t queue_family_indices[] = {0, 0};

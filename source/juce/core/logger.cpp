@@ -9,7 +9,7 @@ namespace juce
 
 const char* level_color(logger::level level)
 {
-	switch (level) {
+	switch(level) {
 		case logger::info:
 			return "\033[38;5;208m";
 		case logger::debug:
@@ -25,7 +25,7 @@ const char* level_color(logger::level level)
 
 const char* level_string(logger::level level)
 {
-	switch (level) {
+	switch(level) {
 		case logger::info:
 			return "INFO";
 		case logger::debug:
@@ -42,15 +42,15 @@ const char* level_string(logger::level level)
 void enable_win_console_ansi_support()
 {
 	static bool ansi_support = false;
-	if (ansi_support)
+	if(ansi_support)
 		return;
 #ifdef _WIN32
 	HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-	if (handle == INVALID_HANDLE_VALUE)
+	if(handle == INVALID_HANDLE_VALUE)
 		return;
 
 	DWORD mode = 0;
-	if (!GetConsoleMode(handle, &mode))
+	if(!GetConsoleMode(handle, &mode))
 		return;
 
 	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
@@ -71,9 +71,6 @@ void logger::log(level level, const char* code, ...)
 	va_start(args, code);
 	std::vsnprintf(buffer, sizeof(buffer), code, args);
 	va_end(args);
-
-	if (level = error) {
-	}
 
 	auto ansi_color = level_color(level);
 	auto level_str  = level_string(level);

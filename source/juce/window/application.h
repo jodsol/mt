@@ -20,8 +20,13 @@ public:
 
 	// Getters
 	HWND get_hwnd() const;
+	void set_hwnd(HWND hwnd);
+
+	LRESULT local_wnd_proc(UINT msg, WPARAM wp, LPARAM lp);
 
 private:
+	static LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+
 	HWND              m_hwnd;
 	graphics_context* m_context;
 };

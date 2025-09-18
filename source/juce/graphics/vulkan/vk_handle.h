@@ -22,6 +22,16 @@ public:
 		return m_handle;
 	}
 
+	T* handle_ptr()
+	{
+		return &m_handle;
+	}
+
+	const T* handle_ptr() const
+	{
+		return &m_handle;
+	}
+
 protected:
 	T m_handle = 0;
 };

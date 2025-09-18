@@ -43,31 +43,27 @@ public:
 
 	void create_logical_device(VkSurfaceKHR surface);
 
-	void print_vk_logical_device();
+	uint32_t graphics_queue_family_index() const;
+	uint32_t present_queue_family_index() const;
+	uint32_t compute_queue_family_index() const;
+	uint32_t transfer_queue_family_index() const;
 
-    uint32_t graphics_queue_family_index() const;
-    uint32_t present_queue_family_index() const;
-    uint32_t compute_queue_family_index() const;
-    uint32_t transfer_queue_family_index() const;
-	
-	const VkQueue graphics_queue() const { return m_graphics_queue; }
-	const VkQueue present_queue() const { return m_present_queue; }
-	const VkQueue compute_queue() const { return m_compute_queue; }
-	const VkQueue transfer_queue() const { return m_transfer_queue; }
+	const VkQueue graphics_queue() const;
 
-	const VkSurfaceKHR get_surface() const
-	{
-		return m_surface;
-	}
+	const VkQueue present_queue() const;
 
-	const vk_physical_device* get_gpu() const
-	{
-		return &m_gpu;
-	}
+	const VkQueue compute_queue() const;
+
+	const VkQueue transfer_queue() const;
+
+	const VkSurfaceKHR surface() const;
+
+	const vk_physical_device* get_gpu() const;
+
+	static uint64_t get_gpu_available_vram_byte(const VkPhysicalDeviceMemoryProperties& mem);
+	static bool     is_gpu_supported_surface(VkPhysicalDevice gpu, const VkSurfaceKHR surface);
 
 protected:
-	static void print_vk_physical_device(const vk_physical_device& gpu);
-
 private:
 	vk_physical_device m_gpu{};
 	VkSurfaceKHR       m_surface        = VK_NULL_HANDLE;

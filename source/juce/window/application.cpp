@@ -7,46 +7,6 @@
 namespace juce
 {
 
-LRESULT WINAPI static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
-{
-	application* app = nullptr;
-
-	if (msg == WM_NCCREATE) {
-		// On window creation, store the 'this' pointer passed from CreateWindowEx.
-		CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lp);
-		app                   = reinterpret_cast<application*>(pCreate->lpCreateParams);
-		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) app);
-	}
-	else {
-		// For other messages, retrieve the stored 'this' pointer.
-		app = reinterpret_cast<application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-	}
-
-	if (app) {
-		switch (msg) {
-			case WM_SIZE:
-			{
-				uint32_t width  = LOWORD(lp);
-				uint32_t height = HIWORD(lp);
-				app->on_window_resized(width, height);
-				break;
-			}
-			case WM_DESTROY:
-			{
-				PostQuitMessage(0);
-				break;
-			}
-			default:
-			{
-				return ::DefWindowProc(hwnd, msg, wp, lp);
-			}
-		}
-		return 0;
-	}
-
-	return ::DefWindowProc(hwnd, msg, wp, lp);
-}
-
 application::application(int args, char* argv[], int cx, int cy) :
     m_hwnd(nullptr), m_context(nullptr)
 {
@@ -55,16 +15,17 @@ application::application(int args, char* argv[], int cx, int cy) :
 
 	// 1. Register the window class
 	WNDCLASSEXA wc{};
-	wc.cbSize        = sizeof(WNDCLASSEXA);
-	wc.style         = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc   = static_wnd_proc;
+	wc.cbSize      = sizeof(WNDCLASSEXA);
+	wc.style       = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = application::static_wnd_proc;
+	// wc.lpfnWndProc   = troll_wnd;
 	wc.hInstance     = GetModuleHandle(nullptr);
 	wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH) GetStockObject(DKGRAY_BRUSH);
 	wc.lpszClassName = "Juce Engine";
 	wc.hIcon         = 0;
 
-	if (!::RegisterClassExA(&wc)) {
+	if(!::RegisterClassExA(&wc)) {
 		assert(0 && "failed to registered class");
 		return;
 	}
@@ -111,16 +72,16 @@ application::~application()
 int application::exec(void* scene)
 {
 	MSG msg{};
-	while (msg.message != WM_QUIT) {
-		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-			if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
+	while(msg.message != WM_QUIT) {
+		while(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+			if(msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
 				PostQuitMessage(0);
 			}
 			::TranslateMessage(&msg);
 			::DispatchMessage(&msg);
 		}
-
-		// Main loop logic
+		// Sleep(600);
+		//  Main loop logic
 		update();
 		render();
 	}
@@ -137,7 +98,9 @@ void application::update()
 
 void application::render()
 {
-	if (m_context) {
+	if(m_context) {
+		// log_debug("current frame : %d swapchain : %d",
+		//     m_context->current_frame(), m_context->swapchain_frame());
 		m_context->draw_frame();
 	}
 }
@@ -149,6 +112,51 @@ void application::on_window_resized(uint32_t width, uint32_t height)
 HWND application::get_hwnd() const
 {
 	return m_hwnd;
+}
+
+void application::set_hwnd(HWND hwnd)
+{
+	m_hwnd = hwnd;
+}
+
+LRESULT application::local_wnd_proc(UINT msg, WPARAM wp, LPARAM lp)
+{
+	switch(msg) {
+		case WM_SIZE:
+		{
+			uint32_t width  = LOWORD(lp);
+			uint32_t height = HIWORD(lp);
+			on_window_resized(width, height);
+			break;
+		}
+		case WM_DESTROY:
+		{
+			PostQuitMessage(0);
+			return 0;
+		}
+		default:
+			break;
+	}
+	return ::DefWindowProc(m_hwnd, msg, wp, lp);
+}
+
+LRESULT WINAPI application::static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
+{
+	application* app = reinterpret_cast<application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+
+	if(msg == WM_NCCREATE) {
+		// On window creation, store the 'this' pointer passed from CreateWindowEx.
+		CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lp);
+		app                   = reinterpret_cast<application*>(pCreate->lpCreateParams);
+		app->set_hwnd(hwnd);
+		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) app);
+	}
+
+	if(app) {
+		return app->local_wnd_proc(msg, wp, lp);
+	}
+
+	return ::DefWindowProc(hwnd, msg, wp, lp);
 }
 
 }        // namespace juce

@@ -18,6 +18,9 @@ public:
 
 	virtual void draw_frame() = 0;
 
+	virtual uint32_t current_frame() const   = 0;
+	virtual uint32_t swapchain_frame() const = 0;
+
 	platform_handle get_window_handle() const
 	{
 		return m_handle;

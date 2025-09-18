@@ -19,11 +19,8 @@ void vk_device::create_device(VkInstance instance, VkSurfaceKHR surface)
 	if (!choose_physical_device(instance, surface, &m_gpu)) {
 		assert(0 && "failed create device");
 	}
-	print_vk_physical_device(m_gpu);
 
 	create_logical_device(surface);
-
-	print_vk_logical_device();
 }
 
 queue_indices find_queue_indices(
@@ -70,7 +67,7 @@ uint32_t get_gpu_type_priority(VkPhysicalDeviceType type)
 	}
 }
 
-uint64_t get_gpu_available_vram_byte(const VkPhysicalDeviceMemoryProperties& mem)
+uint64_t vk_device::get_gpu_available_vram_byte(const VkPhysicalDeviceMemoryProperties& mem)
 {
 	uint64_t mem_size = 0;
 	for (uint32_t i = 0; i < mem.memoryHeapCount; ++i) {
@@ -81,7 +78,7 @@ uint64_t get_gpu_available_vram_byte(const VkPhysicalDeviceMemoryProperties& mem
 	return mem_size;
 }
 
-bool is_gpu_supported_surface(VkPhysicalDevice gpu, const VkSurfaceKHR surface)
+bool vk_device::is_gpu_supported_surface(VkPhysicalDevice gpu, const VkSurfaceKHR surface)
 {
 	if (!surface)
 		return true;
@@ -198,6 +195,36 @@ uint32_t vk_device::transfer_queue_family_index() const
 	if (m_gpu.queue_indices.transfer.has_value())
 		return *m_gpu.queue_indices.transfer;
 	return graphics_queue_family_index();
+}
+
+const VkQueue vk_device::graphics_queue() const
+{
+	return m_graphics_queue;
+}
+
+const VkQueue vk_device::present_queue() const
+{
+	return m_graphics_queue;
+}
+
+const VkQueue vk_device::compute_queue() const
+{
+	return m_compute_queue;
+}
+
+const VkQueue vk_device::transfer_queue() const
+{
+	return m_compute_queue;
+}
+
+const VkSurfaceKHR vk_device::surface() const
+{
+	return m_surface;
+}
+
+const vk_physical_device* vk_device::get_gpu() const
+{
+	return &m_gpu;
 }
 
 void vk_device::create_logical_device(VkSurfaceKHR surface)
@@ -326,76 +353,6 @@ static inline const char* device_type_str(VkPhysicalDeviceType type)
 		default:
 			return "Other/Unknown";
 	}
-}
-
-void vk_device::print_vk_physical_device(const vk_physical_device& gpu)
-{
-	log_debug("----------- Physical Device Info -----------");
-	log_debug("name        : %s", gpu.device_props.deviceName);
-	log_debug("type        : %s", device_type_str(gpu.device_props.deviceType));
-	log_debug("driver ver. : %u", gpu.device_props.driverVersion);
-	log_debug("api ver.    : %u.%u.%u",
-	          VK_VERSION_MAJOR(gpu.device_props.apiVersion),
-	          VK_VERSION_MINOR(gpu.device_props.apiVersion),
-	          VK_VERSION_PATCH(gpu.device_props.apiVersion));
-	unsigned long long vramMB =
-	    static_cast<unsigned long long>(get_gpu_available_vram_byte(gpu.memory_props) / (1024ull * 1024ull));
-
-	log_debug("vram         : %llu mb", vramMB);
-	if (gpu.queue_indices.graphics)
-		log_debug("graphics queue   : %u", *gpu.queue_indices.graphics);
-	if (gpu.queue_indices.present)
-		log_debug("present queue    : %u", *gpu.queue_indices.present);
-	if (gpu.queue_indices.compute)
-		log_debug("compute queue    : %u (dedicated)", *gpu.queue_indices.compute);
-	if (gpu.queue_indices.transfer)
-		log_debug("transfer queue   : %u (dedicated)", *gpu.queue_indices.transfer);
-
-	log_debug("--------------------------------------------");
-}
-
-void vk_device::print_vk_logical_device()
-{
-	log_debug("----------- Logical Device Info ------------");
-	log_debug("VkDevice handle : %p", (void*) m_handle);
-
-	// 큐 핸들 출력
-	log_debug("Graphics Queue  : %p", (void*) m_graphics_queue);
-	if (m_present_queue)
-		log_debug("Present Queue   : %p", (void*) m_present_queue);
-	else
-		log_debug("Present Queue   : (none)");
-
-	if (m_compute_queue)
-		log_debug("Compute Queue   : %p", (void*) m_compute_queue);
-	else
-		log_debug("Compute Queue   : (none)");
-
-	if (m_transfer_queue)
-		log_debug("Transfer Queue  : %p", (void*) m_transfer_queue);
-	else
-		log_debug("Transfer Queue  : (none)");
-
-	VkPhysicalDeviceVulkan13Features feat13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
-	VkPhysicalDeviceVulkan12Features feat12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
-	VkPhysicalDeviceFeatures2        feat2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-	feat2.pNext  = &feat12;
-	feat12.pNext = &feat13;
-	vkGetPhysicalDeviceFeatures2(m_gpu.handle, &feat2);
-
-	log_debug("Vulkan 1.2 Features:");
-	log_debug("  timelineSemaphore  : %d", feat12.timelineSemaphore);
-	log_debug("  bufferDeviceAddress: %d", feat12.bufferDeviceAddress);
-	log_debug("  descriptorIndexing : %d", feat12.descriptorIndexing);
-	log_debug("  bufferDeviceAddress: %d", feat12.bufferDeviceAddress);
-
-	log_debug("Vulkan 1.3 Features:");
-	log_debug("  synchronization2   : %d", feat13.synchronization2);
-	log_debug("  dynamicRendering   : %d", feat13.dynamicRendering);
-	log_debug("  maintenance4       : %d", feat13.maintenance4);
-	log_debug("  inlineUniformBlock : %d", feat13.inlineUniformBlock);
-
-	log_debug("--------------------------------------------");
 }
 
 }        // namespace juce

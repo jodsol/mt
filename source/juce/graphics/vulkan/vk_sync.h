@@ -7,11 +7,11 @@
 
 namespace juce
 {
-class vk_sync_objects
+class vk_sync
 {
 public:
-	vk_sync_objects(VkDevice device);
-	~vk_sync_objects();
+	vk_sync(VkDevice device);
+	~vk_sync();
 
 	// 각 프레임에서 동기화 객체 접근
 	VkSemaphore get_image_available_semaphore(uint32_t frame_index) const;

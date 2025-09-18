@@ -45,7 +45,7 @@ class vk_instance;
 class vk_surface;
 class vk_device;
 class vk_swapchain;
-class vk_sync_objects;
+class vk_sync;
 }        // namespace juce
 
 #include "defines.h"
