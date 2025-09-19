@@ -46,6 +46,8 @@ private:
 	uint32_t m_current_frame         = 0;
 	uint32_t m_swapchain_image_frame = 0;
 
+	// 래퍼 함수들을 동적으로 만들 필요가 있나 싶음
+	// init 을 생성에 쓰고 release 함수를 해제하는거 검토
 	vk_instance*  m_instance{nullptr};
 	vk_surface*   m_surface{nullptr};
 	vk_device*    m_device{nullptr};
