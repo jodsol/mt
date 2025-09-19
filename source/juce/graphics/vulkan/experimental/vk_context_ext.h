@@ -12,6 +12,12 @@ public:
 
 	void init_command_list();
 
+	void begin_frame() final;
+
+	void end_frame() final;
+
+	vk_command_list* get_current_command_list();
+
 	vk_command_list m_command_lists[MAX_SYNC_FRAME]{};
 };
 }        // namespace juce

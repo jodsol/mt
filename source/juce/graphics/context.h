@@ -28,6 +28,14 @@ public:
 	{
 		return m_handle;
 	}
+	uint32_t width() const
+	{
+		return m_cx;
+	}
+	uint32_t height() const
+	{
+		return m_cy;
+	}
 
 private:
 #ifdef _WIN32

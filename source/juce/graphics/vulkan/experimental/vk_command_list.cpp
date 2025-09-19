@@ -36,6 +36,12 @@ void vk_command_list::convert_vk_resource_state(const resource_state& resouce_st
 			states.acess  = 0;
 			states.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		} break;
+		case resource_state::undefined:
+		{
+			states.stage  = VK_PIPELINE_STAGE_2_NONE;
+			states.acess  = 0;
+			states.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		} break;
 		default:
 		{
 			states.stage  = VK_PIPELINE_STAGE_2_NONE;
