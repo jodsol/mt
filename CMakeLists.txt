@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.22)
 
 project(juce-engine LANGUAGES C CXX VERSION 0.0.0)
 
+option(JUCE_USE_EXPERIMENTAL "enable the experimental features" ON)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

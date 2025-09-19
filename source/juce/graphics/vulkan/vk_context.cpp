@@ -10,7 +10,7 @@
 namespace juce
 {
 vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle) :
-    graphics_context(cx, cy, platform_handle)
+    context(cx, cy, platform_handle)
 {
 	uint32_t version = VK_HEADER_VERSION_COMPLETE;
 
@@ -64,7 +64,7 @@ void vk_context::on_resized(uint32 cx, uint32 cy)
 }
 
 // Command Buffer reset → vkBeginCommandBuffer → 이미지 레이아웃 전환 & clear → vkEndCommandBuffer → vkQueueSubmit → vkQueuePresentKHR
-void vk_context::draw_frame()
+void vk_context::draw_frame(float dt)
 {
 	frame_object& frame = frames[m_current_frame];
 
@@ -97,8 +97,12 @@ void vk_context::draw_frame()
 	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
 	VkClearColorValue clear_value;
-	float             flash = std::abs(std::sin(m_frame_number / 120.f));
-	clear_value             = {{flash, flash, flash, flash}};
+	// float             time  = fmod(m_frame_number * dt, 2.0f);
+	static float time  = 0.0f;
+	float        speed = 0.3f;
+	time += dt;
+	float flash = 1.f - std::fabsf(std::sin(3.14159265f * speed * time));
+	clear_value = {{flash, flash, flash, 1.0f}};
 
 	VkImageSubresourceRange clear_range{};
 	clear_range.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -148,10 +152,65 @@ void vk_context::draw_frame()
 
 void vk_context::begin_frame()
 {
+	VkFence fence = m_sync->get_inflight_fence(m_current_frame);
+	vkWaitForFences(device(), 1, &fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(device(), 1, &fence);
+
+	// --- draw_2: Swapchain 이미지 요청
+	uint32_t image_index;
+	VK(vkAcquireNextImageKHR(
+	    m_device->handle(),
+	    m_swapchain->handle(),
+	    UINT64_MAX,
+	    m_sync->get_image_available_semaphore(m_current_frame),
+	    VK_NULL_HANDLE,
+	    &image_index));
+
+	m_swapchain_image_frame = image_index;
+
+	// --- draw_3: Command Buffer reset & begin
+	VkCommandBuffer cmd = frames[m_current_frame].m_cmd;
+	vkResetCommandBuffer(cmd, 0);
+
+	VkCommandBufferBeginInfo begin_info = command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	VK(vkBeginCommandBuffer(cmd, &begin_info));
+
+	VK(vkEndCommandBuffer(cmd));
 }
 
 void vk_context::end_frame()
 {
+	VkSubmitInfo submit_info{};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore          wait_semaphore   = m_sync->get_image_available_semaphore(m_current_frame);
+	VkSemaphore          signal_semaphore = m_sync->get_render_finished_semaphore(m_current_frame);
+	VkPipelineStageFlags wait_stage       = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	submit_info.waitSemaphoreCount   = 1;
+	submit_info.pWaitSemaphores      = &wait_semaphore;
+	submit_info.pWaitDstStageMask    = &wait_stage;
+	submit_info.commandBufferCount   = 1;
+	submit_info.pCommandBuffers      = &frames[m_current_frame].m_cmd;
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores    = &signal_semaphore;
+
+	VkFence fence = m_sync->get_inflight_fence(m_current_frame);
+	VK(vkQueueSubmit(m_device->graphics_queue(), 1, &submit_info, fence));
+
+	// --- draw_6: Present
+	VkPresentInfoKHR present_info{};
+	present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores    = &signal_semaphore;
+	present_info.swapchainCount     = 1;
+	present_info.pSwapchains        = m_swapchain->handle_ptr();
+	present_info.pImageIndices      = &m_swapchain_image_frame;
+
+	VK(vkQueuePresentKHR(m_device->present_queue(), &present_info));
+
+	m_frame_number++;
+	m_current_frame = (m_current_frame + 1) % MAX_SYNC_FRAME;
 }
 
 uint32_t vk_context::current_frame() const
@@ -162,6 +221,26 @@ uint32_t vk_context::current_frame() const
 uint32_t vk_context::swapchain_frame() const
 {
 	return m_swapchain_image_frame;
+}
+
+VkInstance vk_context::instance() const
+{
+	return m_instance->handle();
+}
+
+VkSurfaceKHR vk_context::surface() const
+{
+	return m_surface->handle();
+}
+
+VkDevice vk_context::device() const
+{
+	return m_device->handle();
+}
+
+VkSwapchainKHR vk_context::swapchain() const
+{
+	return m_swapchain->handle();
 }
 
 void vk_context::create_command_objects()
@@ -176,9 +255,7 @@ void vk_context::create_command_objects()
 		pool_info.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		pool_info.queueFamilyIndex = graphics_queue_family;
 
-		if(vkCreateCommandPool(device, &pool_info, nullptr, &frames[i].m_cmd_pool) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create command pool!");
-		}
+		VK(vkCreateCommandPool(device, &pool_info, nullptr, &frames[i].m_cmd_pool));
 
 		// Command Buffer 할당
 		VkCommandBufferAllocateInfo alloc_info{};
@@ -187,9 +264,7 @@ void vk_context::create_command_objects()
 		alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		alloc_info.commandBufferCount = 1;
 
-		if(vkAllocateCommandBuffers(device, &alloc_info, &frames[i].m_cmd) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate command buffer!");
-		}
+		VK(vkAllocateCommandBuffers(device, &alloc_info, &frames[i].m_cmd));
 	}
 }
 

@@ -37,15 +37,20 @@ typedef HINSTANCE__* HINSTANCE;
 namespace juce
 {
 // frontend
-class graphics_context;
+class context;
+class scene;
 
 // backend
 // vulkan
+class vk_context;
 class vk_instance;
 class vk_surface;
 class vk_device;
 class vk_swapchain;
 class vk_sync;
+
+// experimental
+class vk_context_ext;
 }        // namespace juce
 
 #include "defines.h"

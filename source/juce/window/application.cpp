@@ -3,6 +3,9 @@
 #include <juce/core/config.h>
 #include <juce/core/logger.h>
 #include <juce/graphics/vulkan/vk_context.h>
+#include <juce/engine/scene.h>
+#include <juce/graphics/vulkan/experimental/vk_context_ext.h>
+#include <juce/engine/timer.h>
 
 namespace juce
 {
@@ -57,7 +60,11 @@ application::application(int args, char* argv[], int cx, int cy) :
 	uint32 width  = rc.right - rc.left;
 	uint32 height = rc.top - rc.bottom;
 
+#if defined(USE_EXPERIMENTAL)
+	m_context = new vk_context_ext(width, height, m_hwnd);
+#else
 	m_context = new vk_context(width, height, get_hwnd());
+#endif
 
 	::ShowWindow(m_hwnd, SW_SHOW);
 	log_info("%s window created with Vulkan", wc.lpszClassName);
@@ -69,8 +76,15 @@ application::~application()
 	::DestroyWindow(m_hwnd);
 }
 
-int application::exec(void* scene)
+int application::exec(scene* p_scene)
 {
+	scene* current_scene = p_scene;
+	if(current_scene) {
+		current_scene->init();
+	}
+
+	frame_timer timer;
+
 	MSG msg{};
 	while(msg.message != WM_QUIT) {
 		while(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -80,29 +94,32 @@ int application::exec(void* scene)
 			::TranslateMessage(&msg);
 			::DispatchMessage(&msg);
 		}
-		// Sleep(600);
-		//  Main loop logic
-		update();
-		render();
+		timer.begin_frame();
+
+		if(m_context) {
+			// m_context->begin_frame();
+
+			if(current_scene) {
+				current_scene->update_frame(0.f);
+				current_scene->render_frame();
+			}
+			m_context->draw_frame(timer.delta());
+			// m_context->end_frame();
+		}
+
+		timer.end_frame();
+
+		if(timer.frame() == 0) {
+			log_debug("fps : %2f", timer.fps());
+		}
 	}
 	// remove reource
+	if(current_scene) {
+		current_scene->release();
+	}
 	safe_delete(m_context);
 
 	return static_cast<int>(msg.wParam);
-}
-
-void application::update()
-{
-	// Game/application logic updates go here
-}
-
-void application::render()
-{
-	if(m_context) {
-		// log_debug("current frame : %d swapchain : %d",
-		//     m_context->current_frame(), m_context->swapchain_frame());
-		m_context->draw_frame();
-	}
 }
 
 void application::on_window_resized(uint32_t width, uint32_t height)
@@ -138,6 +155,11 @@ LRESULT application::local_wnd_proc(UINT msg, WPARAM wp, LPARAM lp)
 			break;
 	}
 	return ::DefWindowProc(m_hwnd, msg, wp, lp);
+}
+
+const context* application::get_context() const
+{
+	return m_context;
 }
 
 LRESULT WINAPI application::static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
