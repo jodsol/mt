@@ -38,6 +38,7 @@ public:
 	VkDevice       device() const;
 	VkSwapchainKHR swapchain() const;
 
+	// ext class 에서 private 맴버도 허용
 	friend class vk_context_ext;
 
 private:
