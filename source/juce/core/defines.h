@@ -3,7 +3,7 @@
 // macro defines
 
 // juce engine
-#define ENGINE_NAME "Juce Engine"
+#define ENGINE_NAME    "Juce Engine"
 #define MAX_SYNC_FRAME 2
 
 // clang-format off
@@ -17,7 +17,7 @@
 #define debug_new new(_NORMAL_BLOCK, __FILE__, __LINE__)
 #define check_mem_leak() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
 #else
-#define check_mem_leak() (void)x
+#define check_mem_leak() (void)0
 #define debug_new new
 #endif
 

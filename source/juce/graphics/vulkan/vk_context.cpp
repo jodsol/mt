@@ -96,22 +96,22 @@ void vk_context::draw_frame(float dt)
 	VkImage swap_image = m_swapchain->get_images()[image_index];
 	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-	VkClearColorValue clear_value;
-	// float             time  = fmod(m_frame_number * dt, 2.0f);
-	static float time  = 0.0f;
-	float        speed = 0.3f;
-	time += dt;
-	float flash = 1.f - std::fabsf(std::sin(3.14159265f * speed * time));
-	clear_value = {{flash, flash, flash, 1.0f}};
+	// VkClearColorValue clear_value;
+	// // float             time  = fmod(m_frame_number * dt, 2.0f);
+	// static float time  = 0.0f;
+	// float        speed = 0.3f;
+	// time += dt;
+	// float flash = 1.f - std::fabsf(std::sin(3.14159265f * speed * time));
+	// clear_value = {{flash, flash, flash, 1.0f}};
 
-	VkImageSubresourceRange clear_range{};
-	clear_range.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-	clear_range.baseMipLevel   = 0;
-	clear_range.levelCount     = 1;
-	clear_range.baseArrayLayer = 0;
-	clear_range.layerCount     = 1;
+	// VkImageSubresourceRange clear_range{};
+	// clear_range.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+	// clear_range.baseMipLevel   = 0;
+	// clear_range.levelCount     = 1;
+	// clear_range.baseArrayLayer = 0;
+	// clear_range.layerCount     = 1;
 
-	vkCmdClearColorImage(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range);
+	// vkCmdClearColorImage(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range);
 
 	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
@@ -175,11 +175,18 @@ void vk_context::begin_frame()
 	VkCommandBufferBeginInfo begin_info = command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	VK(vkBeginCommandBuffer(cmd, &begin_info));
 
-	VK(vkEndCommandBuffer(cmd));
+	VkImage swap_image = m_swapchain->get_images()[image_index];
+	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 }
 
 void vk_context::end_frame()
 {
+	VkCommandBuffer cmd        = frames[m_current_frame].m_cmd;
+	VkImage         swap_image = m_swapchain->get_images()[m_swapchain_image_frame];
+	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+	VK(vkEndCommandBuffer(cmd));
+
 	VkSubmitInfo submit_info{};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -241,6 +248,11 @@ VkDevice vk_context::device() const
 VkSwapchainKHR vk_context::swapchain() const
 {
 	return m_swapchain->handle();
+}
+
+VkFence vk_context::get_current_fence()
+{
+	return m_sync->get_inflight_fence(m_current_frame);
 }
 
 void vk_context::create_command_objects()

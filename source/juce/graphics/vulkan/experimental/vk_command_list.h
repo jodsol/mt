@@ -8,7 +8,7 @@ namespace juce
 // 리 소스 상태
 enum class resource_state : uint32_t
 {
-	none,
+	undefined,
 	render_target,
 	present
 };
@@ -33,8 +33,8 @@ struct image_transition
 {
 	VkImage        image = VK_NULL_HANDLE;
 	image_resource imaget_resource{};
-	resource_state before = resource_state::none;
-	resource_state after  = resource_state::none;
+	resource_state before = resource_state::undefined;
+	resource_state after  = resource_state::undefined;
 };
 
 class vk_command_list : public vk_handle<VkCommandBuffer>

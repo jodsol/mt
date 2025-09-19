@@ -58,7 +58,7 @@ application::application(int args, char* argv[], int cx, int cy) :
 	::GetClientRect(get_hwnd(), &rc);
 
 	uint32 width  = rc.right - rc.left;
-	uint32 height = rc.top - rc.bottom;
+	uint32 height = rc.bottom - rc.top;
 
 #if defined(USE_EXPERIMENTAL)
 	m_context = new vk_context_ext(width, height, m_hwnd);
@@ -97,14 +97,14 @@ int application::exec(scene* p_scene)
 		timer.begin_frame();
 
 		if(m_context) {
-			// m_context->begin_frame();
+			m_context->begin_frame();
 
 			if(current_scene) {
 				current_scene->update_frame(0.f);
 				current_scene->render_frame();
 			}
-			m_context->draw_frame(timer.delta());
-			// m_context->end_frame();
+			// m_context->draw_frame(timer.delta());
+			m_context->end_frame();
 		}
 
 		timer.end_frame();
