@@ -22,4 +22,9 @@ target_include_directories(juce PUBLIC
     ${juce_inc_dir}
     ${VULKAN_SDK}/Include
 )
+
 target_link_libraries(juce PUBLIC "${VULKAN_SDK}/Lib/vulkan-1.lib")
+
+if(JUCE_USE_EXPERIMENTAL)
+    target_compile_definitions(juce PUBLIC USE_EXPERIMENTAL)
+endif()

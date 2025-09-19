@@ -10,13 +10,13 @@ vk_device::vk_device(VkInstance instance, VkSurfaceKHR surface) :
 
 vk_device::~vk_device()
 {
-	if (m_handle)
+	if(m_handle)
 		vkDestroyDevice(m_handle, nullptr);
 }
 
 void vk_device::create_device(VkInstance instance, VkSurfaceKHR surface)
 {
-	if (!choose_physical_device(instance, surface, &m_gpu)) {
+	if(!choose_physical_device(instance, surface, &m_gpu)) {
 		assert(0 && "failed create device");
 	}
 
@@ -30,22 +30,22 @@ queue_indices find_queue_indices(
 {
 	queue_indices queue_indices{};
 
-	for (uint32_t i = 0; i < (uint32_t) queue_props.size(); ++i) {
+	for(uint32_t i = 0; i < (uint32_t) queue_props.size(); ++i) {
 		VkQueueFlags flag = queue_props[i].queueFlags;
 
-		if ((flag & VK_QUEUE_GRAPHICS_BIT) && !queue_indices.graphics) {
+		if((flag & VK_QUEUE_GRAPHICS_BIT) && !queue_indices.graphics) {
 			queue_indices.graphics = i;
 		}
-		if (!queue_indices.present) {
+		if(!queue_indices.present) {
 			VkBool32 supported_present = VK_FALSE;
 			vkGetPhysicalDeviceSurfaceSupportKHR(gpu, i, surface, &supported_present);
-			if (supported_present)
+			if(supported_present)
 				queue_indices.present = i;
 		}
-		if ((flag & VK_QUEUE_COMPUTE_BIT) && !(flag & VK_QUEUE_GRAPHICS_BIT) && !queue_indices.compute)
+		if((flag & VK_QUEUE_COMPUTE_BIT) && !(flag & VK_QUEUE_GRAPHICS_BIT) && !queue_indices.compute)
 			queue_indices.compute = i;
 
-		if ((flag & VK_QUEUE_TRANSFER_BIT) && !(flag & VK_QUEUE_GRAPHICS_BIT) && !queue_indices.transfer)
+		if((flag & VK_QUEUE_TRANSFER_BIT) && !(flag & VK_QUEUE_GRAPHICS_BIT) && !queue_indices.transfer)
 			queue_indices.transfer = i;
 	}
 	return queue_indices;
@@ -53,7 +53,7 @@ queue_indices find_queue_indices(
 
 uint32_t get_gpu_type_priority(VkPhysicalDeviceType type)
 {
-	switch (type) {
+	switch(type) {
 		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
 			return 5;
 		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
@@ -70,8 +70,8 @@ uint32_t get_gpu_type_priority(VkPhysicalDeviceType type)
 uint64_t vk_device::get_gpu_available_vram_byte(const VkPhysicalDeviceMemoryProperties& mem)
 {
 	uint64_t mem_size = 0;
-	for (uint32_t i = 0; i < mem.memoryHeapCount; ++i) {
-		if (mem.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+	for(uint32_t i = 0; i < mem.memoryHeapCount; ++i) {
+		if(mem.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
 			mem_size += mem.memoryHeaps[i].size;
 		}
 	}
@@ -80,21 +80,21 @@ uint64_t vk_device::get_gpu_available_vram_byte(const VkPhysicalDeviceMemoryProp
 
 bool vk_device::is_gpu_supported_surface(VkPhysicalDevice gpu, const VkSurfaceKHR surface)
 {
-	if (!surface)
+	if(!surface)
 		return true;
 
 	uint32_t surface_count = 0;
 	uint32_t present_count = 0;
 
 	bool has_format = false;
-	if (vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &surface_count, nullptr) == VK_SUCCESS) {
-		if (surface_count > 0)
+	if(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &surface_count, nullptr) == VK_SUCCESS) {
+		if(surface_count > 0)
 			has_format = true;
 	}
 
 	bool has_present = false;
-	if (vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &present_count, nullptr) == VK_SUCCESS) {
-		if (present_count > 0)
+	if(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &present_count, nullptr) == VK_SUCCESS) {
+		if(present_count > 0)
 			has_present = true;
 	}
 
@@ -115,21 +115,21 @@ bool vk_device::choose_physical_device(VkInstance instance, VkSurfaceKHR surface
 	uint32_t           priority_level      = 0;
 	uint64_t           priority_level_vram = 0;
 
-	for (const VkPhysicalDevice& gpu : gpus) {
+	for(const VkPhysicalDevice& gpu : gpus) {
 		uint32_t queue_count = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(gpu, &queue_count, nullptr);
-		if (queue_count == 0)
+		if(queue_count == 0)
 			continue;
 		std::vector<VkQueueFamilyProperties> queue_props(queue_count);
 		vkGetPhysicalDeviceQueueFamilyProperties(gpu, &queue_count, queue_props.data());
 
 		queue_indices queue_indices = find_queue_indices(gpu, surface, queue_props);
 
-		if (!queue_indices.graphics)
+		if(!queue_indices.graphics)
 			continue;
-		if (!queue_indices.present && surface)
+		if(!queue_indices.present && surface)
 			continue;
-		if (!is_gpu_supported_surface(gpu, surface))
+		if(!is_gpu_supported_surface(gpu, surface))
 			continue;
 
 		// get gpu properties
@@ -142,16 +142,16 @@ bool vk_device::choose_physical_device(VkInstance instance, VkSurfaceKHR surface
 		const uint64_t current_level_vram = get_gpu_available_vram_byte(gpu_memory);
 
 		bool is_higher = false;
-		if (!found)        // first gpu
+		if(!found)        // first gpu
 			is_higher = true;
-		else if (current_level > priority_level)        // compute type priority
+		else if(current_level > priority_level)        // compute type priority
 			is_higher = true;
-		else if (current_level == priority_level &&        // compute vram size if type same
-		         current_level_vram > priority_level_vram) {
+		else if(current_level == priority_level &&        // compute vram size if type same
+		        current_level_vram > priority_level_vram) {
 			is_higher = true;
 		}
 
-		if (is_higher) {
+		if(is_higher) {
 			found               = true;
 			priority_level      = current_level;
 			priority_level_vram = current_level_vram;
@@ -163,7 +163,7 @@ bool vk_device::choose_physical_device(VkInstance instance, VkSurfaceKHR surface
 			selected_gpu.flags         = queue_props[queue_indices.graphics.value()].queueFlags;
 		}
 	}
-	if (!found)
+	if(!found)
 		return false;
 
 	*pp_gpu = selected_gpu;
@@ -185,14 +185,14 @@ uint32_t vk_device::present_queue_family_index() const
 
 uint32_t vk_device::compute_queue_family_index() const
 {
-	if (m_gpu.queue_indices.compute.has_value())
+	if(m_gpu.queue_indices.compute.has_value())
 		return *m_gpu.queue_indices.compute;
 	return graphics_queue_family_index();
 }
 
 uint32_t vk_device::transfer_queue_family_index() const
 {
-	if (m_gpu.queue_indices.transfer.has_value())
+	if(m_gpu.queue_indices.transfer.has_value())
 		return *m_gpu.queue_indices.transfer;
 	return graphics_queue_family_index();
 }
@@ -235,14 +235,14 @@ void vk_device::create_logical_device(VkSurfaceKHR surface)
 	unique_families.reserve(4);
 
 	auto push_unique = [&](std::optional<uint32_t> idx) {
-		if (!idx)
+		if(!idx)
 			return;
-		if (std::find(unique_families.begin(), unique_families.end(), *idx) == unique_families.end())
+		if(std::find(unique_families.begin(), unique_families.end(), *idx) == unique_families.end())
 			unique_families.push_back(*idx);
 	};
 
 	push_unique(m_gpu.queue_indices.graphics);
-	if (surface)
+	if(surface)
 		push_unique(m_gpu.queue_indices.present);
 	push_unique(m_gpu.queue_indices.compute);
 	push_unique(m_gpu.queue_indices.transfer);
@@ -250,7 +250,7 @@ void vk_device::create_logical_device(VkSurfaceKHR surface)
 	std::vector<VkDeviceQueueCreateInfo> queue_infos;
 	queue_infos.reserve(unique_families.size());
 	const float qprio = 1.0f;
-	for (uint32_t family : unique_families) {
+	for(uint32_t family : unique_families) {
 		VkDeviceQueueCreateInfo queue_info{VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
 		queue_info.queueFamilyIndex = family;
 		queue_info.queueCount       = 1;
@@ -259,7 +259,7 @@ void vk_device::create_logical_device(VkSurfaceKHR surface)
 	}
 
 	std::vector<const char*> device_exts;
-	if (surface) {
+	if(surface) {
 		device_exts.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	}
 
@@ -276,31 +276,31 @@ void vk_device::create_logical_device(VkSurfaceKHR surface)
 	vkGetPhysicalDeviceFeatures2(m_gpu.handle, &feat2);
 
 	// Vulkan 1.2
-	if (feat12.timelineSemaphore)
+	if(feat12.timelineSemaphore)
 		feat12.timelineSemaphore = VK_TRUE;
-	if (feat12.bufferDeviceAddress)
+	if(feat12.bufferDeviceAddress)
 		feat12.bufferDeviceAddress = VK_TRUE;
-	if (feat12.descriptorIndexing)
+	if(feat12.descriptorIndexing)
 		feat12.descriptorIndexing = VK_TRUE;
-	if (feat12.shaderSampledImageArrayNonUniformIndexing)
+	if(feat12.shaderSampledImageArrayNonUniformIndexing)
 		feat12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-	if (feat12.runtimeDescriptorArray)
+	if(feat12.runtimeDescriptorArray)
 		feat12.runtimeDescriptorArray = VK_TRUE;
-	if (feat12.scalarBlockLayout)
+	if(feat12.scalarBlockLayout)
 		feat12.scalarBlockLayout = VK_TRUE;
-	if (feat12.hostQueryReset)
+	if(feat12.hostQueryReset)
 		feat12.hostQueryReset = VK_TRUE;
 
 	// Vulkan 1.3
-	if (feat13.synchronization2)
+	if(feat13.synchronization2)
 		feat13.synchronization2 = VK_TRUE;        // vkCmdPipelineBarrier2, etc.
-	if (feat13.dynamicRendering)
+	if(feat13.dynamicRendering)
 		feat13.dynamicRendering = VK_TRUE;        // vkCmdBeginRendering
-	if (feat13.maintenance4)
+	if(feat13.maintenance4)
 		feat13.maintenance4 = VK_TRUE;
-	if (feat13.inlineUniformBlock)
+	if(feat13.inlineUniformBlock)
 		feat13.inlineUniformBlock = VK_TRUE;
-	if (feat13.shaderDemoteToHelperInvocation)
+	if(feat13.shaderDemoteToHelperInvocation)
 		feat13.shaderDemoteToHelperInvocation = VK_TRUE;
 
 	feat2.features.samplerAnisotropy = VK_TRUE;
@@ -316,22 +316,22 @@ void vk_device::create_logical_device(VkSurfaceKHR surface)
 
 	VK(vkCreateDevice(m_gpu.handle, &device_info, nullptr, &m_handle));
 
-	if (m_gpu.queue_indices.graphics) {
+	if(m_gpu.queue_indices.graphics) {
 		vkGetDeviceQueue(m_handle, *m_gpu.queue_indices.graphics, 0, &m_graphics_queue);
 	}
-	if (surface && m_gpu.queue_indices.present) {
+	if(surface && m_gpu.queue_indices.present) {
 		vkGetDeviceQueue(m_handle, *m_gpu.queue_indices.present, 0, &m_present_queue);
 	}
 	else {
 		m_present_queue = VK_NULL_HANDLE;
 	}
-	if (m_gpu.queue_indices.compute) {
+	if(m_gpu.queue_indices.compute) {
 		vkGetDeviceQueue(m_handle, *m_gpu.queue_indices.compute, 0, &m_compute_queue);
 	}
 	else {
 		m_compute_queue = VK_NULL_HANDLE;
 	}
-	if (m_gpu.queue_indices.transfer) {
+	if(m_gpu.queue_indices.transfer) {
 		vkGetDeviceQueue(m_handle, *m_gpu.queue_indices.transfer, 0, &m_transfer_queue);
 	}
 	else {
@@ -341,7 +341,7 @@ void vk_device::create_logical_device(VkSurfaceKHR surface)
 
 static inline const char* device_type_str(VkPhysicalDeviceType type)
 {
-	switch (type) {
+	switch(type) {
 		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
 			return "Discrete GPU";
 		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:

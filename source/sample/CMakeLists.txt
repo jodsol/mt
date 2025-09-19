@@ -1,6 +1,7 @@
 # examples
+file(GLOB_RECURSE srcs *.h *.cpp)
 
-add_executable(game "sample.cpp")
+add_executable(game "${srcs}")
 
 target_link_libraries(game PRIVATE juce::juce)
 
