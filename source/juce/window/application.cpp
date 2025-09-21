@@ -11,17 +11,16 @@ namespace juce
 {
 
 application::application(int args, char* argv[], int cx, int cy) :
-    m_hwnd(nullptr), m_context(nullptr)
+    m_hwnd(nullptr), m_context(nullptr), m_runtime_loop(true)
 {
 	unused(args);
 	unused(argv);
 
 	// 1. Register the window class
 	WNDCLASSEXA wc{};
-	wc.cbSize      = sizeof(WNDCLASSEXA);
-	wc.style       = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = application::static_wnd_proc;
-	// wc.lpfnWndProc   = troll_wnd;
+	wc.cbSize        = sizeof(WNDCLASSEXA);
+	wc.style         = CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc   = application::static_wnd_proc;
 	wc.hInstance     = GetModuleHandle(nullptr);
 	wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH) GetStockObject(DKGRAY_BRUSH);
@@ -57,13 +56,13 @@ application::application(int args, char* argv[], int cx, int cy) :
 	RECT rc{};
 	::GetClientRect(get_hwnd(), &rc);
 
-	uint32 width  = rc.right - rc.left;
-	uint32 height = rc.bottom - rc.top;
+	m_cx = rc.right - rc.left;
+	m_cy = rc.bottom - rc.top;
 
 #if defined(USE_EXPERIMENTAL)
-	m_context = new vk_context_ext(width, height, m_hwnd);
+	m_context = new vk_context_ext(m_cx, m_cy, m_hwnd);
 #else
-	m_context = new vk_context(width, height, get_hwnd());
+	m_context = new vk_context(m_cx, m_cy, m_hwnd);
 #endif
 
 	::ShowWindow(m_hwnd, SW_SHOW);
@@ -76,7 +75,7 @@ application::~application()
 	::DestroyWindow(m_hwnd);
 }
 
-int application::exec(scene* p_scene)
+int application::execute_scene(scene* p_scene)
 {
 	scene* current_scene = p_scene;
 	if(current_scene) {
@@ -86,21 +85,26 @@ int application::exec(scene* p_scene)
 	frame_timer timer;
 
 	MSG msg{};
-	while(msg.message != WM_QUIT) {
+	while(is_runtime_loop()) {
 		while(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 			if(msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
 				PostQuitMessage(0);
+				m_runtime_loop = false;
 			}
 			::TranslateMessage(&msg);
 			::DispatchMessage(&msg);
 		}
+
+		if(!m_runtime_loop)
+			continue;
+
 		timer.begin_frame();
 
 		if(m_context) {
 			m_context->begin_frame();
 
 			if(current_scene) {
-				current_scene->update_frame(0.f);
+				current_scene->update_frame(timer.delta());
 				current_scene->render_frame();
 			}
 			// m_context->draw_frame(timer.delta());
@@ -110,7 +114,9 @@ int application::exec(scene* p_scene)
 		timer.end_frame();
 
 		if(timer.frame() == 0) {
-			log_debug("fps : %2f", timer.fps());
+			char buffer[128];
+			sprintf(buffer, "%s  [FPS : %.2f]", ENGINE_NAME, timer.fps());
+			SetWindowTextA(m_hwnd, buffer);
 		}
 	}
 	// remove reource
@@ -122,8 +128,15 @@ int application::exec(scene* p_scene)
 	return static_cast<int>(msg.wParam);
 }
 
-void application::on_window_resized(uint32_t width, uint32_t height)
+void application::on_resized(uint32_t cx, uint32_t cy)
 {
+	if((m_cx != cx) || (m_cy != cy)) {
+		if(m_context) {
+			m_context->resize_frame(cx, cy);
+		}
+	}
+	m_cx = cx;
+	m_cy = cy;
 }
 
 HWND application::get_hwnd() const
@@ -141,15 +154,16 @@ LRESULT application::local_wnd_proc(UINT msg, WPARAM wp, LPARAM lp)
 	switch(msg) {
 		case WM_SIZE:
 		{
-			uint32_t width  = LOWORD(lp);
-			uint32_t height = HIWORD(lp);
-			on_window_resized(width, height);
+			uint32_t cx = LOWORD(lp);
+			uint32_t cy = HIWORD(lp);
+			on_resized(cx, cy);
 			break;
 		}
 		case WM_DESTROY:
 		{
+			m_runtime_loop = false;
 			PostQuitMessage(0);
-			return 0;
+			break;
 		}
 		default:
 			break;
@@ -160,6 +174,11 @@ LRESULT application::local_wnd_proc(UINT msg, WPARAM wp, LPARAM lp)
 const context* application::get_context() const
 {
 	return m_context;
+}
+
+bool application::is_runtime_loop()
+{
+	return m_runtime_loop;
 }
 
 LRESULT WINAPI application::static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
