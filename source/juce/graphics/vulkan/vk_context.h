@@ -14,7 +14,7 @@ public:
 	vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle);
 	~vk_context();
 
-	void on_resized(uint32 cx, uint32 cy) override;
+	void resize_frame(uint32 cx, uint32 cy) override;
 
 	void draw_frame(float dt = 0.0f) override;
 	void begin_frame() override;

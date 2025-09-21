@@ -8,9 +8,9 @@ int main(int args, char* argv[])
 
 	juce::vk_context* context = (juce::vk_context*) app.get_context();
 
-	juce::render_scene scene_0(context);
+	juce::render_scene render_scene(context);
 
-	auto code = app.exec(nullptr);
+	auto code = app.execute_scene(&render_scene);
 
 	return code;
 }

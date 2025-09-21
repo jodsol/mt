@@ -41,7 +41,7 @@ void vk_context_ext::begin_frame()
 
 	cmd_list->resouce_barrier(image_transition{
 	    swap_image,
-	    {},
+	    {VK_IMAGE_ASPECT_COLOR_BIT},
 	    resource_state::undefined,
 	    resource_state::render_target});
 
@@ -53,7 +53,8 @@ void vk_context_ext::begin_frame()
 	color_info.clearValue  = {0.3, 0.2, 0.3, 1.f};
 
 	VkRenderingInfo render_info{VK_STRUCTURE_TYPE_RENDERING_INFO};
-	render_info.renderArea.extent    = {width(), height()};
+	// render_info.renderArea.extent    = {width(), height()};
+	render_info.renderArea.extent    = m_swapchain->extent();
 	render_info.layerCount           = 1;
 	render_info.colorAttachmentCount = 1;
 	render_info.pColorAttachments    = &color_info;

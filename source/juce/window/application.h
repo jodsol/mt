@@ -11,14 +11,15 @@ public:
 	application(int args, char* argv[], int cx, int cy);
 	~application();
 
-	int exec(scene* p_scene);
+	int execute_scene(scene* p_scene);
 	// 창 크기 변경 이벤트를 처리할 함수
-	void on_window_resized(uint32_t width, uint32_t height);
+	void on_resized(uint32_t cx, uint32_t cy);
 
 	// Getters
 	HWND           get_hwnd() const;
 	void           set_hwnd(HWND hwnd);
 	const context* get_context() const;
+	bool           is_runtime_loop();
 
 	LRESULT local_wnd_proc(UINT msg, WPARAM wp, LPARAM lp);
 
@@ -27,6 +28,9 @@ private:
 
 	HWND     m_hwnd;
 	context* m_context;
+	bool     m_runtime_loop;
+	uint32_t m_cx;
+	uint32_t m_cy;
 };
 
 }        // namespace juce

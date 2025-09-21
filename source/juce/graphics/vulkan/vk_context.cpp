@@ -57,10 +57,10 @@ vk_context::~vk_context()
 	safe_delete(m_instance);
 }
 
-void vk_context::on_resized(uint32 cx, uint32 cy)
+void vk_context::resize_frame(uint32 cx, uint32 cy)
 {
-	unused(cx);
-	unused(cy);
+	log_debug("resize frame : %d %d", cx, cy);
+	m_swapchain->recreate_swapchain(cx, cy);
 }
 
 // Command Buffer reset → vkBeginCommandBuffer → 이미지 레이아웃 전환 & clear → vkEndCommandBuffer → vkQueueSubmit → vkQueuePresentKHR

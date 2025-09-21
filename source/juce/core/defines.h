@@ -24,8 +24,3 @@
 // clang-format on
 
 #include "logger.h"
-
-// #ifdef _DEBUG
-//     // 프로그램 종료 시점에 메모리 릭 리포트 출력
-//     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-// #endif
