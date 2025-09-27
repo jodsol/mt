@@ -2,6 +2,7 @@
 #include "../vk_device.h"
 #include "../vk_sync.h"
 #include "../vk_swapchain.h"
+#include "vk_resouce_cache.h"
 
 namespace juce
 {
@@ -10,6 +11,13 @@ vk_context_ext::vk_context_ext(uint32_t cx, uint32_t cy, platform_handle handle)
 {
 	log_info("Use Extension Context 1.3");
 	init_command_list();
+	init_render_targets();
+	vk_resource_cache::initialize(this);
+}
+
+vk_context_ext::~vk_context_ext()
+{
+	vk_resource_cache::deinitialize();
 }
 
 void vk_context_ext::init_command_list()
@@ -17,6 +25,28 @@ void vk_context_ext::init_command_list()
 	for(uint32_t i = 0; i < MAX_SYNC_FRAME; ++i) {
 		VkCommandBuffer cmd = frames[i].m_cmd;
 		m_command_lists[i].init(cmd);
+	}
+	if(m_device->graphics_queue_family_index() != m_device->transfer_queue_family_index()) {
+		log_info("transfer command buffer use the transfer dedicated queue family index");
+	}
+	// m_transfer_pool.init(device(), m_device->transfer_queue_family_index());
+	//  cmd = m_transfer_pool.allocate();
+}
+
+void vk_context_ext::init_render_targets()
+{
+	const VkImage* images      = m_swapchain->get_images().data();
+	uint32_t       image_count = (uint32_t)m_swapchain->get_images().size();
+	for(uint32_t i = 0; i < image_count; ++i) {
+		vk_render_target& render_target = m_render_target[i] = {};
+
+		render_target.extend      = m_swapchain->extent();
+		render_target.layout      = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+		render_target.view        = m_swapchain->get_image_view(i);
+		render_target.image       = m_swapchain->get_image(i);
+		render_target.clear_value = {{0.f, 0.f, 0.f, 1.f}};
+		render_target.load_op     = load_operator::clear;
+		render_target.store_op    = store_operator::store;
 	}
 }
 
@@ -26,55 +56,34 @@ void vk_context_ext::begin_frame()
 	vkWaitForFences(device(), 1, &fence, VK_TRUE, UINT64_MAX);
 	vkResetFences(device(), 1, &fence);
 
-	VK(vkAcquireNextImageKHR(device(),
-	                         swapchain(),
-	                         UINT64_MAX, m_sync->get_image_available_semaphore(m_current_frame),
-	                         VK_NULL_HANDLE, &m_swapchain_image_frame));
+	VK(vkAcquireNextImageKHR(device(), swapchain(), UINT64_MAX,
+	                         m_sync->get_image_available_semaphore(m_current_frame), VK_NULL_HANDLE,
+	                         &m_swapchain_image_frame));
 
-	VkImage swap_image = m_swapchain->get_images()[m_swapchain_image_frame];
+	VkImage swap_image = m_swapchain->get_image(m_swapchain_image_frame);
 
 	vk_command_list* cmd_list = get_current_command_list();
 
-	vkResetCommandBuffer(cmd_list->handle(), 0);
+	cmd_list->reset();
 
-	cmd_list->begin();
-
-	cmd_list->resouce_barrier(image_transition{
-	    swap_image,
-	    {VK_IMAGE_ASPECT_COLOR_BIT},
-	    resource_state::undefined,
-	    resource_state::render_target});
-
-	VkRenderingAttachmentInfo color_info{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
-	color_info.imageView   = m_swapchain->get_image_views()[m_swapchain_image_frame];
-	color_info.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-	color_info.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	color_info.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
-	color_info.clearValue  = {0.3, 0.2, 0.3, 1.f};
-
-	VkRenderingInfo render_info{VK_STRUCTURE_TYPE_RENDERING_INFO};
-	// render_info.renderArea.extent    = {width(), height()};
-	render_info.renderArea.extent    = m_swapchain->extent();
-	render_info.layerCount           = 1;
-	render_info.colorAttachmentCount = 1;
-	render_info.pColorAttachments    = &color_info;
-
-	vkCmdBeginRendering(cmd_list->handle(), &render_info);
+	cmd_list->resouce_barrier(
+	    image_transition{swap_image,
+	                     {VK_IMAGE_ASPECT_COLOR_BIT},
+	                     resource_state::undefined,
+	                     resource_state::render_target});        // no excute at that time
 }
 
 void vk_context_ext::end_frame()
 {
 	vk_command_list* cmd_list = get_current_command_list();
 
-	vkCmdEndRendering(cmd_list->handle());
+	cmd_list->end_render_target();
 
-	cmd_list->resouce_barrier(image_transition(
-	    m_swapchain->get_images()[m_swapchain_image_frame],
-	    {},
-	    resource_state::render_target,
-	    resource_state::present));
+	cmd_list->resouce_barrier(image_transition(m_swapchain->get_image(m_swapchain_image_frame), {},
+	                                           resource_state::render_target,
+	                                           resource_state::present));
 
-	cmd_list->end();
+	cmd_list->close();
 
 	VkPipelineStageFlags wait_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -90,7 +99,8 @@ void vk_context_ext::end_frame()
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores    = &render_semaphore;
 
-	VK(vkQueueSubmit(m_device->graphics_queue(), 1, &submit_info, m_sync->get_inflight_fence(m_current_frame)));
+	VK(vkQueueSubmit(m_device->graphics_queue(), 1, &submit_info,
+	                 m_sync->get_inflight_fence(m_current_frame)));
 
 	VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
 	present_info.waitSemaphoreCount = 1;
@@ -107,6 +117,11 @@ void vk_context_ext::end_frame()
 vk_command_list* vk_context_ext::get_current_command_list()
 {
 	return &m_command_lists[m_current_frame];
+}
+
+vk_render_target* vk_context_ext::get_current_swapchain_render_target()
+{
+	return &m_render_target[m_swapchain_image_frame];
 }
 
 }        // namespace juce

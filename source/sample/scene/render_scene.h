@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce/engine/scene.h>
+#include <memory>
 
 namespace juce
 {
@@ -18,5 +19,17 @@ public:
 	void update_frame(float dt) override;
 	void render_frame() override;
 	void release() override;
+
+	struct vec3f
+	{
+		float x, y, z;
+	};
+
+	struct vertex
+	{
+		vec3f pos;
+	};
+
+	vk_buffer* m_vertex_buffer = nullptr;
 };
 }        // namespace juce

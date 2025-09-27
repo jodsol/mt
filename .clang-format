@@ -12,10 +12,11 @@ AlignOperands: false # ex0
 AlignTrailingComments: false
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: false
-AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: None
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
+AllowShortEnumsOnASingleLine: true # enum single line
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
@@ -26,7 +27,7 @@ BraceWrapping:
   AfterCaseLabel: true
   AfterClass: true
   AfterControlStatement: false # if for while
-  AfterEnum: true
+  AfterEnum: false # enum
   AfterFunction: true
   AfterNamespace: true
   AfterObjCDeclaration: true
@@ -89,7 +90,7 @@ PointerAlignment: Left
 ReflowComments: true
 SortIncludes: false
 SortUsingDeclarations: true
-SpaceAfterCStyleCast: true
+SpaceAfterCStyleCast: false
 SpaceAfterTemplateKeyword: true
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeCtorInitializerColon: true

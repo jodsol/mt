@@ -32,6 +32,11 @@ public:
 		return &m_handle;
 	}
 
+	bool valid()
+	{
+		return m_handle ? true : false;
+	}
+
 protected:
 	T m_handle = 0;
 };

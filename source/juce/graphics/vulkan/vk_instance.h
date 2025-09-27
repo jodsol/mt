@@ -28,7 +28,6 @@ public:
 	void get_supported_exts_and_layers();
 
 private:
-	// VkInstance                      m_instance           = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT        m_debug_messger      = VK_NULL_HANDLE;
 	bool                            m_validation_enabled = false;
 	std::unordered_set<std::string> m_instance_extensions;

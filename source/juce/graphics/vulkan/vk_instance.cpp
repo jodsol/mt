@@ -8,12 +8,11 @@ vk_instance::vk_instance(const char*                     name,
                          const std::vector<const char*>& req_layers)
 {
 	create_instnace(name, req_extentions, req_layers);
-	log_info("[juce] instance created");
 }
 
 vk_instance::~vk_instance()
 {
-	if (!m_handle)
+	if(!m_handle)
 		vkDestroyInstance(m_handle, nullptr);
 	m_handle = VK_NULL_HANDLE;
 }
@@ -28,15 +27,15 @@ void vk_instance::create_instnace(
 	std::vector<const char*> availble_extension;
 	std::vector<const char*> availble_layer;
 
-	for (auto const& req_ext : req_extensions) {
-		if (is_supported_extension(req_ext)) {
+	for(auto const& req_ext : req_extensions) {
+		if(is_supported_extension(req_ext)) {
 			log_debug("[juce] instance extension : %s", req_ext);
 			availble_extension.emplace_back(req_ext);
 		}
 	}
 
-	for (auto const& req_layer : req_layers) {
-		if (is_supported_layer(req_layer)) {
+	for(auto const& req_layer : req_layers) {
+		if(is_supported_layer(req_layer)) {
 			log_debug("[juce] instance layer : %s", req_layer);
 			availble_layer.emplace_back(req_layer);
 		}
@@ -76,12 +75,12 @@ void vk_instance::get_supported_exts_and_layers()
 	uint32_t ext_count{};
 	vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
 
-	if (ext_count) {
+	if(ext_count) {
 		std::vector<VkExtensionProperties> props(ext_count);
 		vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, props.data());
 
 		m_instance_extensions.clear();
-		for (const auto& e : props) {
+		for(const auto& e : props) {
 			m_instance_extensions.insert(e.extensionName);
 		}
 	}
@@ -90,12 +89,12 @@ void vk_instance::get_supported_exts_and_layers()
 	uint32_t layer_count{};
 	vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
 
-	if (layer_count) {
+	if(layer_count) {
 		std::vector<VkLayerProperties> layers(layer_count);
 		vkEnumerateInstanceLayerProperties(&layer_count, layers.data());
 
 		m_instance_layers.clear();
-		for (const auto& l : layers) {
+		for(const auto& l : layers) {
 			m_instance_layers.insert(l.layerName);
 		}
 	}

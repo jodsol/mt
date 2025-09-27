@@ -78,6 +78,7 @@ reg_vk_destroy_fn(VkDescriptorSetLayout, vkDestroyDescriptorSetLayout);
 reg_vk_destroy_fn(VkSampler, vkDestroySampler);
 reg_vk_destroy_fn(VkImage, vkDestroyImage);
 reg_vk_destroy_fn(VkImageView, vkDestroyImageView);
+reg_vk_destroy_fn(VkCommandPool, vkDestroyCommandPool);
 
 template <typename T>
 inline void __vk_safe_destroy(VkDevice device, T& handle)

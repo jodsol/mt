@@ -16,8 +16,6 @@ public:
 
 	virtual void resize_frame(uint32 cx, uint32 cy) = 0;
 
-	virtual void draw_frame(float dt) = 0;
-
 	virtual void begin_frame() = 0;
 	virtual void end_frame()   = 0;
 
