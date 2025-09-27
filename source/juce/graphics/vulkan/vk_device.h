@@ -25,10 +25,7 @@ struct vk_physical_device
 	VkPhysicalDeviceMemoryProperties memory_props{};        // heap,type ..etc info
 	VkPhysicalDeviceProperties       device_props{};        // gpu name, caps, driver info
 
-	operator VkPhysicalDevice() const
-	{
-		return handle;
-	}
+	operator VkPhysicalDevice() const { return handle; }
 };
 
 class vk_device : public vk_handle<VkDevice>
@@ -39,7 +36,8 @@ public:
 
 	void create_device(VkInstance instance, VkSurfaceKHR surface);
 
-	bool choose_physical_device(VkInstance instance, VkSurfaceKHR surface, vk_physical_device* pp_gpu);
+	bool choose_physical_device(VkInstance instance, VkSurfaceKHR surface,
+	                            vk_physical_device* pp_gpu);
 
 	void create_logical_device(VkSurfaceKHR surface);
 
@@ -63,8 +61,8 @@ public:
 	static uint64_t get_gpu_available_vram_byte(const VkPhysicalDeviceMemoryProperties& mem);
 	static bool     is_gpu_supported_surface(VkPhysicalDevice gpu, const VkSurfaceKHR surface);
 
-protected:
-private:
+	// protected:
+	//  private:
 	vk_physical_device m_gpu{};
 	VkSurfaceKHR       m_surface        = VK_NULL_HANDLE;
 	VkQueue            m_graphics_queue = VK_NULL_HANDLE;

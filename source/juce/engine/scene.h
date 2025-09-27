@@ -17,7 +17,7 @@ public:
 	virtual void render_frame()      = 0;
 	virtual void release()           = 0;
 
-private:
+	// private:
 	vk_context* m_context;
 };
 }        // namespace juce

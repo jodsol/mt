@@ -16,7 +16,6 @@ public:
 
 	void resize_frame(uint32 cx, uint32 cy) override;
 
-	void draw_frame(float dt = 0.0f) override;
 	void begin_frame() override;
 	void end_frame() override;
 
@@ -37,13 +36,17 @@ public:
 	VkSurfaceKHR   surface() const;
 	VkDevice       device() const;
 	VkSwapchainKHR swapchain() const;
+	VkQueue        graphics_queue() const;
+	VkQueue        transfer_queue() const;
+	uint32_t       graphics_queue_index() const;
+	uint32_t       transfer_queue_index() const;
 
 	VkFence get_current_fence();
 
 	// ext class 에서 private 맴버도 허용
 	friend class vk_context_ext;
 
-private:
+	// private:
 	uint32_t m_frame_number          = 0;
 	uint32_t m_current_frame         = 0;
 	uint32_t m_swapchain_image_frame = 0;
@@ -59,6 +62,7 @@ private:
 	void                     create_command_objects();
 	void                     destroy_command_objects();
 	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags);
-	void                     transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout);
+	void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
+	                      VkImageLayout newLayout);
 };
 }        // namespace juce

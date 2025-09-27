@@ -6,6 +6,7 @@
 #include "vk_device.h"
 #include "vk_swapchain.h"
 #include "vk_sync.h"
+#include "util/vk_debug.h"
 
 namespace juce
 {
@@ -14,8 +15,8 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 {
 	uint32_t version = VK_HEADER_VERSION_COMPLETE;
 
-	log_info("Juce-Engine : Vulkan API ver %d.%d.%d\n",
-	         VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
+	log_info("Juce-Engine : Vulkan API ver %d.%d.%d\n", VK_VERSION_MAJOR(version),
+	         VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 
 	std::vector<const char*> required_extensions = {
 #ifdef _WIN32
@@ -23,8 +24,7 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 #elif defined(__linux__)
 	    VK_KHR_XCB_SURFACE_EXTENSION_NAME,
 #endif
-	    VK_KHR_SURFACE_EXTENSION_NAME,
-	    VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+	    VK_KHR_SURFACE_EXTENSION_NAME, VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 	    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
 
 	std::vector<const char*> required_layers = {
@@ -38,6 +38,8 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 	m_device    = debug_new    vk_device(m_instance->handle(), m_surface->handle());
 	m_swapchain = debug_new vk_swapchain(m_device, cx, cy);
 	m_sync      = debug_new      vk_sync(m_device->handle());
+
+	vk_debug::print_queue_families(m_device);
 
 	// Command Pool + Buffer 생성
 	create_command_objects();
@@ -63,92 +65,8 @@ void vk_context::resize_frame(uint32 cx, uint32 cy)
 	m_swapchain->recreate_swapchain(cx, cy);
 }
 
-// Command Buffer reset → vkBeginCommandBuffer → 이미지 레이아웃 전환 & clear → vkEndCommandBuffer → vkQueueSubmit → vkQueuePresentKHR
-void vk_context::draw_frame(float dt)
-{
-	frame_object& frame = frames[m_current_frame];
-
-	// --- draw_1: GPU가 이전 프레임 끝날 때까지 대기
-	VkFence fence = m_sync->get_inflight_fence(m_current_frame);
-	vkWaitForFences(m_device->handle(), 1, &fence, VK_TRUE, UINT64_MAX);
-	vkResetFences(m_device->handle(), 1, &fence);
-
-	// --- draw_2: Swapchain 이미지 요청
-	uint32_t image_index;
-	VK(vkAcquireNextImageKHR(
-	    m_device->handle(),
-	    m_swapchain->handle(),
-	    UINT64_MAX,
-	    m_sync->get_image_available_semaphore(m_current_frame),
-	    VK_NULL_HANDLE,
-	    &image_index));
-
-	m_swapchain_image_frame = image_index;
-
-	// --- draw_3: Command Buffer reset & begin
-	VkCommandBuffer cmd = frame.m_cmd;
-	vkResetCommandBuffer(cmd, 0);
-
-	VkCommandBufferBeginInfo begin_info = command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	VK(vkBeginCommandBuffer(cmd, &begin_info));
-
-	// --- draw_4: 이미지 레이아웃 전환 + clear + 다시 present용으로 전환
-	VkImage swap_image = m_swapchain->get_images()[image_index];
-	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-
-	// VkClearColorValue clear_value;
-	// // float             time  = fmod(m_frame_number * dt, 2.0f);
-	// static float time  = 0.0f;
-	// float        speed = 0.3f;
-	// time += dt;
-	// float flash = 1.f - std::fabsf(std::sin(3.14159265f * speed * time));
-	// clear_value = {{flash, flash, flash, 1.0f}};
-
-	// VkImageSubresourceRange clear_range{};
-	// clear_range.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-	// clear_range.baseMipLevel   = 0;
-	// clear_range.levelCount     = 1;
-	// clear_range.baseArrayLayer = 0;
-	// clear_range.layerCount     = 1;
-
-	// vkCmdClearColorImage(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range);
-
-	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-	VK(vkEndCommandBuffer(cmd));
-
-	// --- draw_5: Command Buffer 제출
-	VkSubmitInfo submit_info{};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-	VkSemaphore          wait_semaphore   = m_sync->get_image_available_semaphore(m_current_frame);
-	VkSemaphore          signal_semaphore = m_sync->get_render_finished_semaphore(m_current_frame);
-	VkPipelineStageFlags wait_stage       = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-	submit_info.waitSemaphoreCount   = 1;
-	submit_info.pWaitSemaphores      = &wait_semaphore;
-	submit_info.pWaitDstStageMask    = &wait_stage;
-	submit_info.commandBufferCount   = 1;
-	submit_info.pCommandBuffers      = &cmd;
-	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores    = &signal_semaphore;
-
-	VK(vkQueueSubmit(m_device->graphics_queue(), 1, &submit_info, fence));
-
-	// --- draw_6: Present
-	VkPresentInfoKHR present_info{};
-	present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores    = &signal_semaphore;
-	present_info.swapchainCount     = 1;
-	present_info.pSwapchains        = m_swapchain->handle_ptr();
-	present_info.pImageIndices      = &image_index;
-
-	VK(vkQueuePresentKHR(m_device->present_queue(), &present_info));
-
-	m_frame_number++;
-	m_current_frame = (m_current_frame + 1) % MAX_SYNC_FRAME;
-}
+// Command Buffer reset → vkBeginCommandBuffer → 이미지 레이아웃 전환 & clear → vkEndCommandBuffer →
+// vkQueueSubmit → vkQueuePresentKHR
 
 void vk_context::begin_frame()
 {
@@ -158,13 +76,9 @@ void vk_context::begin_frame()
 
 	// --- draw_2: Swapchain 이미지 요청
 	uint32_t image_index;
-	VK(vkAcquireNextImageKHR(
-	    m_device->handle(),
-	    m_swapchain->handle(),
-	    UINT64_MAX,
-	    m_sync->get_image_available_semaphore(m_current_frame),
-	    VK_NULL_HANDLE,
-	    &image_index));
+	VK(vkAcquireNextImageKHR(m_device->handle(), m_swapchain->handle(), UINT64_MAX,
+	                         m_sync->get_image_available_semaphore(m_current_frame), VK_NULL_HANDLE,
+	                         &image_index));
 
 	m_swapchain_image_frame = image_index;
 
@@ -172,7 +86,8 @@ void vk_context::begin_frame()
 	VkCommandBuffer cmd = frames[m_current_frame].m_cmd;
 	vkResetCommandBuffer(cmd, 0);
 
-	VkCommandBufferBeginInfo begin_info = command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	VkCommandBufferBeginInfo begin_info =
+	    command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	VK(vkBeginCommandBuffer(cmd, &begin_info));
 
 	VkImage swap_image = m_swapchain->get_images()[image_index];
@@ -255,6 +170,26 @@ VkFence vk_context::get_current_fence()
 	return m_sync->get_inflight_fence(m_current_frame);
 }
 
+VkQueue vk_context::graphics_queue() const
+{
+	return m_device->graphics_queue();
+}
+
+VkQueue vk_context::transfer_queue() const
+{
+	return m_device->transfer_queue();
+}
+
+uint32_t vk_context::graphics_queue_index() const
+{
+	return m_device->graphics_queue_family_index();
+}
+
+uint32_t vk_context::transfer_queue_index() const
+{
+	return m_device->transfer_queue_family_index();
+}
+
 void vk_context::create_command_objects()
 {
 	VkDevice device                = m_device->handle();
@@ -307,8 +242,8 @@ VkCommandBufferBeginInfo vk_context::command_buffer_begin_info(VkCommandBufferUs
 	return info;
 }
 
-void vk_context::transition_image(VkCommandBuffer cmd, VkImage image,
-                                  VkImageLayout oldLayout, VkImageLayout newLayout)
+void vk_context::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout oldLayout,
+                                  VkImageLayout newLayout)
 {
 	VkImageMemoryBarrier barrier{};
 	barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -354,7 +289,7 @@ void vk_context::transition_image(VkCommandBuffer cmd, VkImage image,
 	switch(newLayout) {
 		case VK_IMAGE_LAYOUT_GENERAL:
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-			dstStage              = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			break;
 		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
 			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
@@ -366,14 +301,7 @@ void vk_context::transition_image(VkCommandBuffer cmd, VkImage image,
 			break;
 	}
 
-	vkCmdPipelineBarrier(
-	    cmd,
-	    srcStage,
-	    dstStage,
-	    0,
-	    0, nullptr,
-	    0, nullptr,
-	    1, &barrier);
+	vkCmdPipelineBarrier(cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 }        // namespace juce

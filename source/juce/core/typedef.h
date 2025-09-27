@@ -33,6 +33,12 @@ typedef HWND__* HWND;
 struct HINSTANCE__;
 typedef HINSTANCE__* HINSTANCE;
 
+// Vulkan
+typedef struct VkBuffer_T*       VkBuffer;
+typedef struct VkDeviceMemory_T* VkDeviceMemory;
+typedef struct VkDevice_T*       VkDevice;
+typedef uint64_t                 VkDeviceSize;
+
 // Juce Forward Declare
 namespace juce
 {
@@ -49,8 +55,37 @@ class vk_device;
 class vk_swapchain;
 class vk_sync;
 
+// struct
+struct vk_buffer;
+
 // experimental
 class vk_context_ext;
+
+// engine enum
+enum class render_target_type { color,
+	                            depth,
+	                            stencil,
+	                            depth_stencil };
+
+enum class load_operator { load,
+	                       clear,
+	                       discard };
+
+enum class store_operator { store,
+	                        discard,
+	                        no_access };
+
+enum class buffer_type { vertex,
+	                     index,
+	                     uniform };
+
+struct buffer_create_info
+{
+	buffer_type type;
+	const void* p_data;
+	uint32_t    cb_size;
+};
+
 }        // namespace juce
 
 #include "defines.h"
