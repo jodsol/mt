@@ -60,26 +60,29 @@ void vk_context_ext::begin_frame()
 	                         m_sync->get_image_available_semaphore(m_current_frame), VK_NULL_HANDLE,
 	                         &m_swapchain_image_frame));
 
-	VkImage swap_image = m_swapchain->get_image(m_swapchain_image_frame);
-
 	vk_command_list* cmd_list = get_current_command_list();
 
 	cmd_list->reset();
 
+	vk_render_target* rtv = get_current_swapchain_render_target();
+
 	cmd_list->resouce_barrier(
-	    image_transition{swap_image,
+	    image_transition{rtv->image,
 	                     {VK_IMAGE_ASPECT_COLOR_BIT},
 	                     resource_state::undefined,
 	                     resource_state::render_target});        // no excute at that time
+
+	cmd_list->begin_render_target(1, &rtv, nullptr);
 }
 
 void vk_context_ext::end_frame()
 {
-	vk_command_list* cmd_list = get_current_command_list();
+	vk_command_list*  cmd_list = get_current_command_list();
+	vk_render_target* rtv      = m_swapchain->get_render_target(m_swapchain_image_frame);
 
 	cmd_list->end_render_target();
 
-	cmd_list->resouce_barrier(image_transition(m_swapchain->get_image(m_swapchain_image_frame), {},
+	cmd_list->resouce_barrier(image_transition(rtv->image, {VK_IMAGE_ASPECT_COLOR_BIT},
 	                                           resource_state::render_target,
 	                                           resource_state::present));
 

@@ -23,7 +23,7 @@ application::application(int args, char* argv[], int cx, int cy) :
 	wc.lpfnWndProc   = application::static_wnd_proc;
 	wc.hInstance     = GetModuleHandle(nullptr);
 	wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH) GetStockObject(DKGRAY_BRUSH);
+	wc.hbrBackground = (HBRUSH)GetStockObject(DKGRAY_BRUSH);
 	wc.lpszClassName = "Juce Engine";
 	wc.hIcon         = 0;
 
@@ -60,8 +60,10 @@ application::application(int args, char* argv[], int cx, int cy) :
 	m_cy = rc.bottom - rc.top;
 
 #if defined(USE_EXPERIMENTAL)
+	log_info("Creating vk_context_ext");
 	m_context = new vk_context_ext(m_cx, m_cy, m_hwnd);
 #else
+	log_info("Creating vk_context");
 	m_context = new vk_context(m_cx, m_cy, m_hwnd);
 #endif
 
@@ -190,7 +192,7 @@ LRESULT WINAPI application::static_wnd_proc(HWND hwnd, UINT msg, WPARAM wp, LPAR
 		CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lp);
 		app                   = reinterpret_cast<application*>(pCreate->lpCreateParams);
 		app->set_hwnd(hwnd);
-		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) app);
+		SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)app);
 	}
 
 	if(app) {
