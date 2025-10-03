@@ -23,9 +23,11 @@ struct vk_render_target
 
 	// union
 	float clear_color[4];
-
-	float   clear_depth;
-	uint8_t clear_stencil;
+	
+	union {
+        float   clear_depth;
+        uint8_t clear_stencil;
+    };
 };
 
 }        // namespace juce

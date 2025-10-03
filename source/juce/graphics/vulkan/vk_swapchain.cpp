@@ -29,7 +29,7 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
 	// 2. format, present, extent 가져오기
 	VkSurfaceFormatKHR surface_format = choose_swap_surface_format(swapchain_support.formats);
 	VkPresentModeKHR   present_mode   = choose_swap_present_mode(swapchain_support.presentModes);
-	VkExtent2D         extent = choose_swap_extent(swapchain_support.capabilities, width, height);
+	VkExtent2D         extent         = choose_swap_extent(swapchain_support.capabilities, width, height);
 
 	uint32_t image_count = swapchain_support.capabilities.minImageCount + 1;
 	if(swapchain_support.capabilities.maxImageCount > 0 &&
@@ -46,7 +46,7 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
 	create_info.imageColorSpace  = surface_format.colorSpace;
 	create_info.imageExtent      = extent;
 	create_info.imageArrayLayers = 1;
-	create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+	create_info.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 	    VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 	// 4. Queue family 설정 필요 (graphicsFamily, presentFamily)
@@ -79,6 +79,8 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
 
 	// 7. ImageView 생성
 	create_image_views();
+
+	create_render_targets();
 
 	return true;
 }
@@ -156,6 +158,8 @@ SwapChainSupportDetails vk_swapchain::query_swapchain_support(VkPhysicalDevice p
 
 bool vk_swapchain::destroy_swapchain()
 {
+	m_render_targets.clear();
+
 	// ImageView 제거
 	for(auto imageView : m_swapchain_image_views) {
 		if(imageView != VK_NULL_HANDLE) {
@@ -216,6 +220,23 @@ VkExtent2D vk_swapchain::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capa
 	}
 
 	return extent;
+}
+
+void vk_swapchain::create_render_targets()
+{
+	m_render_targets.resize(m_swapchain_images.size());
+
+	for(size_t i = 0; i < m_swapchain_images.size(); ++i) {
+		vk_render_target& rt = m_render_targets[i];
+		rt.image             = m_swapchain_images[i];
+		rt.view              = m_swapchain_image_views[i];
+		rt.format            = m_swapchain_image_format;
+		rt.extend            = m_swapchain_extent;
+		rt.layout            = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+		rt.clear_value       = {{0.f, 0.f, 0.f, 1.f}};
+		rt.load_op           = load_operator::clear;
+		rt.store_op          = store_operator::store;
+	}
 }
 
 }        // namespace juce
