@@ -11,7 +11,6 @@ vk_context_ext::vk_context_ext(uint32_t cx, uint32_t cy, platform_handle handle)
 {
 	log_info("Use Extension Context 1.3");
 	init_command_list();
-	init_render_targets();
 	vk_resource_cache::initialize(this);
 }
 
@@ -31,23 +30,6 @@ void vk_context_ext::init_command_list()
 	}
 	// m_transfer_pool.init(device(), m_device->transfer_queue_family_index());
 	//  cmd = m_transfer_pool.allocate();
-}
-
-void vk_context_ext::init_render_targets()
-{
-	const VkImage* images      = m_swapchain->get_images().data();
-	uint32_t       image_count = (uint32_t)m_swapchain->get_images().size();
-	for(uint32_t i = 0; i < image_count; ++i) {
-		vk_render_target& render_target = m_render_target[i] = {};
-
-		render_target.extend      = m_swapchain->extent();
-		render_target.layout      = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-		render_target.view        = m_swapchain->get_image_view(i);
-		render_target.image       = m_swapchain->get_image(i);
-		render_target.clear_value = {{0.f, 0.f, 0.f, 1.f}};
-		render_target.load_op     = load_operator::clear;
-		render_target.store_op    = store_operator::store;
-	}
 }
 
 void vk_context_ext::begin_frame()

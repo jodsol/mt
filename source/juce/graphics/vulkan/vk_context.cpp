@@ -90,14 +90,14 @@ void vk_context::begin_frame()
 	    command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	VK(vkBeginCommandBuffer(cmd, &begin_info));
 
-	VkImage swap_image = m_swapchain->get_images()[image_index];
+	VkImage swap_image = m_swapchain->get_image(image_index);
 	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 }
 
 void vk_context::end_frame()
 {
 	VkCommandBuffer cmd        = frames[m_current_frame].m_cmd;
-	VkImage         swap_image = m_swapchain->get_images()[m_swapchain_image_frame];
+	VkImage         swap_image = m_swapchain->get_image(m_swapchain_image_frame);
 	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 	VK(vkEndCommandBuffer(cmd));
@@ -289,7 +289,7 @@ void vk_context::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLay
 	switch(newLayout) {
 		case VK_IMAGE_LAYOUT_GENERAL:
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-			dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			dstStage              = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			break;
 		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
 			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;

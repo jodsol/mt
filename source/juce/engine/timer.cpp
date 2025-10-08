@@ -22,7 +22,7 @@ void frame_timer::end_frame()
 	++m_frame;
 
 	if(m_elapsed >= 1.0f) {
-		m_fsp   = (float) m_frame / m_elapsed;
+		m_fsp   = (float)m_frame / m_elapsed;
 		m_last  = now;
 		m_frame = 0;
 	}

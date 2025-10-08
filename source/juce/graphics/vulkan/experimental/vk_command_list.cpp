@@ -42,8 +42,9 @@ void vk_command_list::begin_render_target(uint32_t rtv_count, vk_render_target**
 		const vk_render_target*    rtv        = rtvs[i];
 		color_info.sType                      = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
 		color_info.imageView                  = rtv->view;
-		color_info.clearValue                 = rtv->clear_value;
-		color_info.imageLayout                = rtv->layout;
+
+		color_info.clearValue  = rtv->clear_value;
+		color_info.imageLayout = rtv->layout;
 		// loadop = 렌더 시작시 어떻게 처리 할지 정의
 		// LOAD_OP_LOAD = 기존 이미지 내용 그대로 유지
 		// LOAD_OP_CLEAR = 랜더 시작전 clear value 로 초기화

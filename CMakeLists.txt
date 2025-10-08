@@ -16,3 +16,11 @@ add_subdirectory(source/juce "${CMAKE_CURRENT_BINARY_DIR}/juce")
 
 # excutable
 add_subdirectory(source/sample "${CMAKE_CURRENT_BINARY_DIR}/sample")
+
+find_program(GLSLANG_VALIDATOR glslangValidator)
+
+if (NOT GLSLANG_VALIDATOR)
+    message(FATAL_ERROR "glslangValidator not found! Please install Vulkan SDK.")
+else()
+    message(STATUS "Found glslangValidator: ${GLSLANG_VALIDATOR}")
+endif()
