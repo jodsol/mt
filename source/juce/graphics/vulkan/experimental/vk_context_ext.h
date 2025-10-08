@@ -21,8 +21,7 @@ public:
 
 	vk_command_list m_command_lists[MAX_SYNC_FRAME]{};
 
-	vk_render_target* get_current_swapchain_render_target();
-	vk_render_target  m_render_target[8];
+	vk_render_target m_render_target[8];
 
 	VkCommandBuffer cmd;
 	vk_command_list m_transfer_cmd;

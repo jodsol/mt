@@ -10,7 +10,7 @@ namespace juce
 
 struct SwapChainSupportDetails
 {
-	VkSurfaceCapabilitiesKHR		capabilities;
+	VkSurfaceCapabilitiesKHR        capabilities;
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR>   presentModes;
 };
@@ -26,35 +26,33 @@ public:
 	void recreate_swapchain(uint32_t cur_width, uint32_t cur_height);
 
 	// Swapchain images
-	VkImage	get_image(uint32_t index);
+	VkImage     get_image(uint32_t index);
 	VkImageView get_image_view(uint32_t index);
 
 	VkExtent2D extent() const { return m_swapchain_extent; }
 
 	// Render targets
-	vk_render_target* get_render_target(uint32_t index) { return m_render_targets[index]; }
-
+	vk_render_target* get_render_target(uint32_t index);
 
 	// private
 	VkPhysicalDevice m_physical_device = VK_NULL_HANDLE;
-	VkDevice		 m_device		  = VK_NULL_HANDLE;
-	VkSurfaceKHR	 m_surface		 = VK_NULL_HANDLE;
+	VkDevice         m_device          = VK_NULL_HANDLE;
+	VkSurfaceKHR     m_surface         = VK_NULL_HANDLE;
 
-	VkFormat m_swapchain_image_format = VK_FORMAT_UNDEFINED;
-	VkExtent2D m_swapchain_extent = {0, 0};
-
+	VkFormat   m_swapchain_image_format = VK_FORMAT_UNDEFINED;
+	VkExtent2D m_swapchain_extent       = {0, 0};
 
 	// Render targets
 	std::vector<vk_render_target*> m_render_targets;
 
 	// Swapchain support
 	SwapChainSupportDetails query_swapchain_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
-	VkSurfaceFormatKHR choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
-	VkPresentModeKHR   choose_swap_present_mode(const std::vector<VkPresentModeKHR>& available_present_modes);
-	VkExtent2D		 choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
+	VkSurfaceFormatKHR      choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats);
+	VkPresentModeKHR        choose_swap_present_mode(const std::vector<VkPresentModeKHR>& available_present_modes);
+	VkExtent2D              choose_swap_extent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
 
 	// ImageView
 	VkImageView create_image_view(VkImage image, VkFormat format);
 };
 
-} // namespace juce
+}        // namespace juce

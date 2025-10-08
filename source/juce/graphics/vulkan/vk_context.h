@@ -41,7 +41,8 @@ public:
 	uint32_t       graphics_queue_index() const;
 	uint32_t       transfer_queue_index() const;
 
-	VkFence get_current_fence();
+	VkFence           get_current_fence();
+	vk_render_target* get_current_swapchain_render_target();
 
 	// ext class 에서 private 맴버도 허용
 	friend class vk_context_ext;
@@ -62,7 +63,7 @@ public:
 	void                     create_command_objects();
 	void                     destroy_command_objects();
 	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags);
-	void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
-	                      VkImageLayout newLayout);
+	void                     transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
+	                                          VkImageLayout newLayout);
 };
 }        // namespace juce

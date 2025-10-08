@@ -11,12 +11,10 @@ vk_context_ext::vk_context_ext(uint32_t cx, uint32_t cy, platform_handle handle)
 {
 	log_info("Use Extension Context 1.3");
 	init_command_list();
-	vk_resource_cache::initialize(this);
 }
 
 vk_context_ext::~vk_context_ext()
 {
-	vk_resource_cache::deinitialize();
 }
 
 void vk_context_ext::init_command_list()
@@ -102,11 +100,6 @@ void vk_context_ext::end_frame()
 vk_command_list* vk_context_ext::get_current_command_list()
 {
 	return &m_command_lists[m_current_frame];
-}
-
-vk_render_target* vk_context_ext::get_current_swapchain_render_target()
-{
-	return &m_render_target[m_swapchain_image_frame];
 }
 
 }        // namespace juce

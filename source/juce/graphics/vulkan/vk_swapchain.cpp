@@ -130,6 +130,11 @@ VkImageView vk_swapchain::get_image_view(uint32_t index)
 	return m_render_targets[index]->view;
 }
 
+// vk_render_target* vk_swapchain::get_render_target(uint32_t index)
+// {
+// 	return m_render_targets[index];
+// }
+
 VkImageView vk_swapchain::create_image_view(VkImage image, VkFormat format)
 {
 	VkImageViewCreateInfo view_info{};

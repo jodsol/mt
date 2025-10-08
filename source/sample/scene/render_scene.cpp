@@ -31,6 +31,7 @@ void render_scene::render_frame()
 	vk_command_list* cmd_list = ctx->get_current_command_list();
 	// VkCommandBuffer  cmd          = reinterpret_cast<VkCommandBuffer>(command_list);
 	auto back_buffer = ctx->get_current_swapchain_render_target();
+	ctx->get_current_swapchain_render_target();
 
 	const float clear[] = {0.5f, 0.5f, 0.2f, 1.f};
 

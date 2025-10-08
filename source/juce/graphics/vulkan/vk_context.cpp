@@ -170,6 +170,11 @@ VkFence vk_context::get_current_fence()
 	return m_sync->get_inflight_fence(m_current_frame);
 }
 
+vk_render_target* vk_context::get_current_swapchain_render_target()
+{
+	return m_swapchain->get_render_target(m_swapchain_image_frame);
+}
+
 VkQueue vk_context::graphics_queue() const
 {
 	return m_device->graphics_queue();
