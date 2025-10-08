@@ -1,6 +1,7 @@
 #include "vk_swapchain.h"
 #include <algorithm>
 #include "vk_device.h"
+#include <juce/graphics/vulkan/experimental/vk_render_target.h>
 
 namespace juce
 {
@@ -70,17 +71,38 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
 	VK(vkCreateSwapchainKHR(m_device, &create_info, nullptr, &m_handle));
 
 	// 6. 이미지 가져오기
+	std::vector<VkImage> images;
+
 	vkGetSwapchainImagesKHR(m_device, m_handle, &image_count, nullptr);
-	m_swapchain_images.resize(image_count);
-	vkGetSwapchainImagesKHR(m_device, m_handle, &image_count, m_swapchain_images.data());
+	images.resize(image_count);
+	vkGetSwapchainImagesKHR(m_device, m_handle, &image_count, images.data());
 
 	m_swapchain_image_format = surface_format.format;
 	m_swapchain_extent       = extent;
 
-	// 7. ImageView 생성
-	create_image_views();
+	m_render_targets.resize(image_count);
 
-	create_render_targets();
+	for(uint32_t i = 0; i < image_count; i++) {
+		VkImage           image         = images[i];
+		VkImageView       view          = create_image_view(images[i], m_swapchain_image_format);
+		vk_render_target* render_target = debug_new vk_render_target();
+
+		render_target->type   = render_target_type::color;
+		render_target->device = m_device;
+		render_target->image  = image;
+		render_target->view   = view;
+		render_target->mem    = nullptr;
+		render_target->format = m_swapchain_image_format;
+		render_target->extend = extent;
+		render_target->layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+
+		render_target->clear_value.color = {0.f, 0.f, 0.f, 1.f};
+
+		render_target->load_op  = load_operator::clear;
+		render_target->store_op = store_operator::store;
+
+		m_render_targets[i] = render_target;
+	}
 
 	return true;
 }
@@ -98,14 +120,14 @@ void vk_swapchain::recreate_swapchain(uint32_t cur_width, uint32_t cur_height)
 	create_swapchain(cur_width, cur_height);
 }
 
-void vk_swapchain::create_image_views()
+VkImage vk_swapchain::get_image(uint32_t index)
 {
-	m_swapchain_image_views.resize(m_swapchain_images.size());
+	return m_render_targets[index]->image;
+}
 
-	for(size_t i = 0; i < m_swapchain_images.size(); i++) {
-		m_swapchain_image_views[i] =
-		    create_image_view(m_swapchain_images[i], m_swapchain_image_format);
-	}
+VkImageView vk_swapchain::get_image_view(uint32_t index)
+{
+	return m_render_targets[index]->view;
 }
 
 VkImageView vk_swapchain::create_image_view(VkImage image, VkFormat format)
@@ -158,17 +180,12 @@ SwapChainSupportDetails vk_swapchain::query_swapchain_support(VkPhysicalDevice p
 
 bool vk_swapchain::destroy_swapchain()
 {
-	m_render_targets.clear();
+	for(uint32_t i = 0; i < m_render_targets.size(); i++) {
+		m_render_targets.clear();
+		safe_delete(m_render_targets[i]);
+	}
 
 	// ImageView 제거
-	for(auto imageView : m_swapchain_image_views) {
-		if(imageView != VK_NULL_HANDLE) {
-			vkDestroyImageView(m_device, imageView, nullptr);
-		}
-	}
-	m_swapchain_image_views.clear();
-	m_swapchain_images.clear();
-
 	if(m_handle != VK_NULL_HANDLE) {
 		vkDestroySwapchainKHR(m_device, m_handle, nullptr);
 		m_handle = VK_NULL_HANDLE;
@@ -220,23 +237,6 @@ VkExtent2D vk_swapchain::choose_swap_extent(const VkSurfaceCapabilitiesKHR& capa
 	}
 
 	return extent;
-}
-
-void vk_swapchain::create_render_targets()
-{
-	m_render_targets.resize(m_swapchain_images.size());
-
-	for(size_t i = 0; i < m_swapchain_images.size(); ++i) {
-		vk_render_target& rt = m_render_targets[i];
-		rt.image             = m_swapchain_images[i];
-		rt.view              = m_swapchain_image_views[i];
-		rt.format            = m_swapchain_image_format;
-		rt.extend            = m_swapchain_extent;
-		rt.layout            = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-		rt.clear_value       = {{0.f, 0.f, 0.f, 1.f}};
-		rt.load_op           = load_operator::clear;
-		rt.store_op          = store_operator::store;
-	}
 }
 
 }        // namespace juce

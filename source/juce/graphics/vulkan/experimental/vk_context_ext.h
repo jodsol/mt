@@ -12,7 +12,6 @@ public:
 	vk_context_ext(uint32_t cx, uint32_t cy, platform_handle handle);
 	virtual ~vk_context_ext();
 	void init_command_list();
-	void init_render_targets();
 
 	void begin_frame() final;
 

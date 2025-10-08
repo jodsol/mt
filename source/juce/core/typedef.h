@@ -39,6 +39,7 @@ typedef struct VkDeviceMemory_T* VkDeviceMemory;
 typedef struct VkDevice_T*       VkDevice;
 typedef uint64_t                 VkDeviceSize;
 
+
 // Juce Forward Declare
 namespace juce
 {
@@ -47,6 +48,7 @@ class context;
 class scene;
 
 // backend
+
 // vulkan
 class vk_context;
 class vk_instance;
@@ -57,6 +59,7 @@ class vk_sync;
 
 // struct
 struct vk_buffer;
+struct vk_render_target;
 
 // experimental
 class vk_context_ext;
@@ -84,6 +87,20 @@ struct buffer_create_info
 	buffer_type type;
 	const void* p_data;
 	uint32_t    cb_size;
+};
+
+struct clear_value {
+	float color[4];
+};
+
+// owned: vk_device에서 생성된 자원일 때
+// imported: pure heap에서 만들었을 때
+enum class alloc_scope {
+	owned, imported
+};
+
+enum class shader_stage {
+	vertex, pixel, geometry, hull
 };
 
 }        // namespace juce
