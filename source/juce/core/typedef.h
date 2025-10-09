@@ -63,6 +63,7 @@ class vk_command_list;
 class vk_device;
 
 // struct
+struct vk_shader;
 struct vk_buffer;
 struct vk_buffer_ext;
 struct vk_render_target;
@@ -126,6 +127,14 @@ enum class shader_stage {
 	pixel,
 	geometry,
 	hull
+};
+
+struct shader_create_info {
+  shader_stage stage;
+  const char* filename;
+  const char* entry;
+  // const char* include;
+  // const char* defines;
 };
 
 }        // namespace juce

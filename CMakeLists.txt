@@ -12,10 +12,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wno-nullability-completeness)
 endif()
 
-set(juce_bin_dir "${CMAKE_CURRENT_SOURCE_DIR}/bin")
-set(juce_inc_dir "${CMAKE_CURRENT_SOURCE_DIR}/source")
-
 # engine
+set(juce_bin_dir  "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+set(juce_inc_dir  "${CMAKE_CURRENT_SOURCE_DIR}/source")
+set(juce_data_dir "${CMAKE_CURRENT_SOURCE_DIR}/data")
+
+add_compile_definitions(DATA_DIR="${juce_data_dir}")
+
 add_subdirectory(source/juce "${CMAKE_CURRENT_BINARY_DIR}/juce")
 
 # excutable
