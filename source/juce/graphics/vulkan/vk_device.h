@@ -12,6 +12,8 @@ public:
 	~vk_device();
 
 	void create_buffer(const buffer_create_info* info, vk_buffer_ext** pp_buffer);
+	void create_spv_from_file(const shader_create_info* info, vk_shader **pp_shader);
+
 
 private:
 	void create();
