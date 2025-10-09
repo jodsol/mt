@@ -9,7 +9,7 @@ class scene
 {
 public:
 	scene(vk_context* context) :
-	    m_context(context) {
+	    m_context(context), m_device(context->get_graphics_device()) {
 	    };
 	virtual ~scene()                 = default;
 	virtual void init()              = 0;
@@ -19,5 +19,6 @@ public:
 
 	// private:
 	vk_context* m_context;
+	vk_device*  m_device;
 };
 }        // namespace juce

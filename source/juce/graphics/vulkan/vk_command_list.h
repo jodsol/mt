@@ -1,13 +1,12 @@
 #pragma once
 
-#include <juce/graphics/vulkan/vk_config.h>
-#include <juce/graphics/vulkan/vk_handle.h>
-#include "vk_render_target.h"
+#include <juce/core/typedef.h>
+#include "vk_config.h"
+#include "vk_handle.h"
 
 namespace juce
 {
 // 리 소스 상태
-enum class resource_state : uint32_t { undefined, render_target, present };
 
 struct image_resource
 {
@@ -27,10 +26,10 @@ struct vk_resouce_state
 
 struct image_transition
 {
-	VkImage        image = VK_NULL_HANDLE;
-	image_resource imaget_resource{};
-	resource_state before = resource_state::undefined;
-	resource_state after  = resource_state::undefined;
+	VkImage         image = VK_NULL_HANDLE;
+	image_resource  imaget_resource{};
+	resource_layout before = resource_layout::undefined;
+	resource_layout after  = resource_layout::undefined;
 };
 
 #define MAX_COLOR_ATTACHMENT 12
@@ -38,9 +37,8 @@ struct image_transition
 class vk_command_list : public vk_handle<VkCommandBuffer>
 {
 public:
-	vk_command_list() = default;
-
-	void init(VkCommandBuffer cmd);
+	vk_command_list(VkDevice device, VkCommandPool pool, VkCommandBufferLevel level);
+	~vk_command_list();
 
 	void reset();
 	void close();
@@ -51,8 +49,8 @@ public:
 
 	void clear_color_render_target(vk_render_target* rtv, const float* value);
 
-	static void convert_vk_resource_state(const resource_state& resouce_state,
-	                                      vk_resouce_state&     states);
+	static void convert_vk_resource_layout(const resource_layout& resouce_state,
+	                                       vk_resouce_state&      states);
 
 	// resource barriers
 	void resouce_barrier(const image_transition& trans);
@@ -64,7 +62,9 @@ public:
 		uint32_t                  color_info_count;
 	} m_render_attachments;
 
-	bool m_is_cmd_rendering_bound = false;
-	bool m_is_clear_color         = false;
+	VkDevice      m_device                 = VK_NULL_HANDLE;
+	VkCommandPool m_pool                   = VK_NULL_HANDLE;
+	bool          m_is_cmd_rendering_bound = false;
+	bool          m_is_clear_color         = false;
 };
 }        // namespace juce

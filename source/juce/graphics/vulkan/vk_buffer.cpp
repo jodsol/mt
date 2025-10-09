@@ -1,5 +1,6 @@
 #include "vk_buffer.h"
 #include "vk_config.h"
+#include "util/vk_mem_alloc.h"
 
 namespace juce
 {
@@ -16,13 +17,18 @@ vk_buffer::~vk_buffer()
 	// vk_safe_destroy(device, handle);
 }
 
-vk_buffer_ext* vk_buffer_ext::create_buffer_ext(VkDevice device, VkBuffer buf, VmaAllocation alloc)
+vk_buffer_ext::~vk_buffer_ext()
 {
-	vk_buffer_ext* buffer = debug_new vk_buffer_ext;
-	buffer->device        = device;
-	buffer->handle        = buf;
-	buffer->allocation    = alloc;
-	return buffer;
+	release();
+}
+
+void vk_buffer_ext::release()
+{
+	if(handle) {
+		vmaDestroyBuffer(allocator, handle, allocation);
+		handle     = VK_NULL_HANDLE;
+		allocation = VK_NULL_HANDLE;
+	}
 }
 
 }        // namespace juce

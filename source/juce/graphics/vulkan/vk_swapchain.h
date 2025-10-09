@@ -18,12 +18,12 @@ struct SwapChainSupportDetails
 class vk_swapchain : public vk_handle<VkSwapchainKHR>
 {
 public:
-	vk_swapchain(const vk_device* device, uint32_t cx, uint32_t cy);
+	vk_swapchain(const vk_logical_device* device, uint32_t cx, uint32_t cy);
 	~vk_swapchain();
 
 	bool create_swapchain(uint32_t width, uint32_t height);
 	bool destroy_swapchain();
-	void recreate_swapchain(uint32_t cur_width, uint32_t cur_height);
+	void recreate_swapchain(uint32_t cx, uint32_t cy);
 
 	// Swapchain images
 	VkImage     get_image(uint32_t index);

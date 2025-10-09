@@ -3,9 +3,10 @@
 namespace juce
 {
 
-frame_timer::frame_timer() :
-    m_last(mono_clock::now()), m_start(m_last)
+frame_timer::frame_timer()
 {
+	m_last  = mono_clock::now();
+	m_start = m_last;
 }
 
 void frame_timer::begin_frame()

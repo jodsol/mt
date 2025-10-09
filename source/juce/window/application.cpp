@@ -4,7 +4,6 @@
 #include <juce/core/logger.h>
 #include <juce/graphics/vulkan/vk_context.h>
 #include <juce/engine/scene.h>
-#include <juce/graphics/vulkan/experimental/vk_context_ext.h>
 #include <juce/engine/timer.h>
 
 namespace juce
@@ -59,13 +58,7 @@ application::application(int args, char* argv[], int cx, int cy) :
 	m_cx = rc.right - rc.left;
 	m_cy = rc.bottom - rc.top;
 
-#if defined(USE_EXPERIMENTAL)
-	log_info("Creating vk_context_ext");
-	m_context = new vk_context_ext(m_cx, m_cy, m_hwnd);
-#else
-	log_info("Creating vk_context");
-	m_context = new vk_context(m_cx, m_cy, m_hwnd);
-#endif
+	m_context = debug_new vk_context(m_cx, m_cy, m_hwnd);
 
 	::ShowWindow(m_hwnd, SW_SHOW);
 	log_info("%s window created with Vulkan", wc.lpszClassName);
@@ -97,8 +90,13 @@ int application::execute_scene(scene* p_scene)
 			::DispatchMessage(&msg);
 		}
 
+		// 종료시 마지막 프레임 실행 X
 		if(!m_runtime_loop)
 			continue;
+		// 창 숨김시 프레임 실행 X
+		if(m_minimized) {
+			continue;
+		}
 
 		timer.begin_frame();
 
@@ -125,6 +123,7 @@ int application::execute_scene(scene* p_scene)
 	if(current_scene) {
 		current_scene->release();
 	}
+
 	safe_delete(m_context);
 
 	return static_cast<int>(msg.wParam);
@@ -158,13 +157,49 @@ LRESULT application::local_wnd_proc(UINT msg, WPARAM wp, LPARAM lp)
 		{
 			uint32_t cx = LOWORD(lp);
 			uint32_t cy = HIWORD(lp);
-			on_resized(cx, cy);
-			break;
+
+			m_cx = cx;
+			m_cy = cy;
+
+			if(wp == SIZE_MINIMIZED) {
+				m_minimized = true;
+				return 0;
+			}
+			m_minimized = false;
+
+			if(wp == SIZE_MAXIMIZED) {
+				if(m_context) {
+					m_context->resize_frame(m_cx, m_cy);
+					return 0;
+				}
+			}
+			if(wp == SIZE_RESTORED) {
+				if(m_context && !m_sizing_and_move) {
+					m_context->resize_frame(m_cx, m_cy);
+					return 0;
+				}
+			}
+			return 0;
 		}
+
 		case WM_DESTROY:
 		{
 			m_runtime_loop = false;
 			PostQuitMessage(0);
+			break;
+		}
+		case WM_ENTERSIZEMOVE:
+		{
+			m_sizing_and_move = true;
+			break;
+		}
+		case WM_EXITSIZEMOVE:
+		{
+			m_sizing_and_move = false;
+
+			if(m_context && !m_minimized) {
+				m_context->resize_frame(m_cx, m_cy);
+			}
 			break;
 		}
 		default:

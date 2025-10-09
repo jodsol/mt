@@ -12,13 +12,13 @@
 
 #define vk_load_instance_func(device, func)                             \
 	do {                                                                \
-		func = (PFN_##func) vkGetInstanceProcAddr(device, #func);       \
+		func = (PFN_##func)vkGetInstanceProcAddr(device, #func);        \
 		assert(func && "Failed to load device-level function: " #func); \
 	} while(0)
 
 #define vk_load_device_func(device, func)                               \
 	do {                                                                \
-		func = (PFN_##func) vkGetDeviceProcAddr(device, #func);         \
+		func = (PFN_##func)vkGetDeviceProcAddr(device, #func);          \
 		assert(func && "Failed to load device-level function: " #func); \
 	} while(0)
 
