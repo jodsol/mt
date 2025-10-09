@@ -28,7 +28,9 @@ private:
 
 	HWND     m_hwnd;
 	context* m_context;
-	bool     m_runtime_loop;
+	bool     m_runtime_loop    = true;
+	bool     m_sizing_and_move = false;
+	bool     m_minimized       = false;
 	uint32_t m_cx;
 	uint32_t m_cy;
 };

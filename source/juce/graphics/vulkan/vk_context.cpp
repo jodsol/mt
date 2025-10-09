@@ -3,10 +3,13 @@
 #include <juce/core/logger.h>
 #include "vk_instance.h"
 #include "vk_surface.h"
-#include "vk_device.h"
+#include "vk_logical_device.h"
 #include "vk_swapchain.h"
 #include "vk_sync.h"
 #include "util/vk_debug.h"
+#include "vk_command_list.h"
+#include "vk_render_target.h"
+#include "vk_device.h"
 
 namespace juce
 {
@@ -33,28 +36,30 @@ vk_context::vk_context(uint32_t cx, uint32_t cy, platform_handle platform_handle
 #endif
 	};
 
-	m_instance  = debug_new  vk_instance(ENGINE_NAME, required_extensions, required_layers);
-	m_surface   = debug_new   vk_surface(m_instance->handle(), platform_handle);
-	m_device    = debug_new    vk_device(m_instance->handle(), m_surface->handle());
-	m_swapchain = debug_new vk_swapchain(m_device, cx, cy);
-	m_sync      = debug_new      vk_sync(m_device->handle());
+	m_instance       = debug_new       vk_instance(ENGINE_NAME, required_extensions, required_layers);
+	m_surface        = debug_new        vk_surface(m_instance->handle(), platform_handle);
+	m_logical_device = debug_new vk_logical_device(m_instance->handle(), m_surface->handle());
+	m_swapchain      = debug_new      vk_swapchain(m_logical_device, cx, cy);
+	m_sync           = debug_new           vk_sync(m_logical_device->handle());
 
-	vk_debug::print_queue_families(m_device);
-
+	vk_debug::print_queue_families(m_logical_device);
 	// Command Pool + Buffer 생성
 	create_command_objects();
+
+	m_device = debug_new vk_device(this);
 }
 
 vk_context::~vk_context()
 {
 	// 중요 모는 gpu 작업이 끝날떄까지 기다림
-	vkDeviceWaitIdle(m_device->handle());
+	vkDeviceWaitIdle(m_logical_device->handle());
+	safe_delete(m_device);
 
 	destroy_command_objects();
 
 	safe_delete(m_sync);
 	safe_delete(m_swapchain);
-	safe_delete(m_device);
+	safe_delete(m_logical_device);
 	safe_delete(m_surface);
 	safe_delete(m_instance);
 }
@@ -62,77 +67,85 @@ vk_context::~vk_context()
 void vk_context::resize_frame(uint32 cx, uint32 cy)
 {
 	log_debug("resize frame : %d %d", cx, cy);
-	m_swapchain->recreate_swapchain(cx, cy);
+	if(width() != cx || height() != cy) {
+		log_debug("recreate swapcahin : %d %d", cx, cy);
+		m_swapchain->recreate_swapchain(cx, cy);
+	}
+	set_size(cx, cy);
 }
-
-// Command Buffer reset → vkBeginCommandBuffer → 이미지 레이아웃 전환 & clear → vkEndCommandBuffer →
-// vkQueueSubmit → vkQueuePresentKHR
 
 void vk_context::begin_frame()
 {
-	VkFence fence = m_sync->get_inflight_fence(m_current_frame);
-	vkWaitForFences(device(), 1, &fence, VK_TRUE, UINT64_MAX);
-	vkResetFences(device(), 1, &fence);
+	VkDevice device = get_logical_device_handle();
 
-	// --- draw_2: Swapchain 이미지 요청
-	uint32_t image_index;
-	VK(vkAcquireNextImageKHR(m_device->handle(), m_swapchain->handle(), UINT64_MAX,
+	VkFence fence = get_current_fence();
+	vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(device, 1, &fence);
+
+	VK(vkAcquireNextImageKHR(device, swapchain(), UINT64_MAX,
 	                         m_sync->get_image_available_semaphore(m_current_frame), VK_NULL_HANDLE,
-	                         &image_index));
+	                         &m_swapchain_image_frame));
 
-	m_swapchain_image_frame = image_index;
+	vk_command_list* cmd_list = get_current_command_list();
 
-	// --- draw_3: Command Buffer reset & begin
-	VkCommandBuffer cmd = frames[m_current_frame].m_cmd;
-	vkResetCommandBuffer(cmd, 0);
+	cmd_list->reset();
 
-	VkCommandBufferBeginInfo begin_info =
-	    command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	VK(vkBeginCommandBuffer(cmd, &begin_info));
+	vk_render_target* rtv = get_current_swapchain_render_target();
 
-	VkImage swap_image = m_swapchain->get_image(image_index);
-	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+	cmd_list->resouce_barrier(
+	    image_transition{rtv->image,
+	                     {VK_IMAGE_ASPECT_COLOR_BIT},
+	                     resource_layout::undefined,
+	                     resource_layout::render_target});        // no excute at that time
+
+	cmd_list->begin_render_target(1, &rtv, nullptr);
 }
 
 void vk_context::end_frame()
 {
-	VkCommandBuffer cmd        = frames[m_current_frame].m_cmd;
-	VkImage         swap_image = m_swapchain->get_image(m_swapchain_image_frame);
-	transition_image(cmd, swap_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	vk_command_list*  cmd_list = get_current_command_list();
+	vk_render_target* rtv      = m_swapchain->get_render_target(m_swapchain_image_frame);
 
-	VK(vkEndCommandBuffer(cmd));
+	cmd_list->end_render_target();
 
-	VkSubmitInfo submit_info{};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	cmd_list->resouce_barrier(image_transition(rtv->image, {VK_IMAGE_ASPECT_COLOR_BIT},
+	                                           resource_layout::render_target,
+	                                           resource_layout::present));
 
-	VkSemaphore          wait_semaphore   = m_sync->get_image_available_semaphore(m_current_frame);
-	VkSemaphore          signal_semaphore = m_sync->get_render_finished_semaphore(m_current_frame);
-	VkPipelineStageFlags wait_stage       = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	cmd_list->close();
 
+	VkPipelineStageFlags wait_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	VkSemaphore wait_semaphore   = m_sync->get_image_available_semaphore(m_current_frame);
+	VkSemaphore render_semaphore = m_sync->get_render_finished_semaphore(m_current_frame);
+
+	VkSubmitInfo submit_info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+	submit_info.pWaitDstStageMask    = &wait_stage_mask;
+	submit_info.commandBufferCount   = 1;
+	submit_info.pCommandBuffers      = cmd_list->handle_ptr();
 	submit_info.waitSemaphoreCount   = 1;
 	submit_info.pWaitSemaphores      = &wait_semaphore;
-	submit_info.pWaitDstStageMask    = &wait_stage;
-	submit_info.commandBufferCount   = 1;
-	submit_info.pCommandBuffers      = &frames[m_current_frame].m_cmd;
 	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores    = &signal_semaphore;
+	submit_info.pSignalSemaphores    = &render_semaphore;
 
-	VkFence fence = m_sync->get_inflight_fence(m_current_frame);
-	VK(vkQueueSubmit(m_device->graphics_queue(), 1, &submit_info, fence));
+	VK(vkQueueSubmit(m_logical_device->graphics_queue(), 1, &submit_info,
+	                 m_sync->get_inflight_fence(m_current_frame)));
 
-	// --- draw_6: Present
-	VkPresentInfoKHR present_info{};
-	present_info.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
 	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores    = &signal_semaphore;
+	present_info.pWaitSemaphores    = &render_semaphore;
 	present_info.swapchainCount     = 1;
 	present_info.pSwapchains        = m_swapchain->handle_ptr();
 	present_info.pImageIndices      = &m_swapchain_image_frame;
 
-	VK(vkQueuePresentKHR(m_device->present_queue(), &present_info));
+	VK(vkQueuePresentKHR(m_logical_device->graphics_queue(), &present_info));
 
-	m_frame_number++;
 	m_current_frame = (m_current_frame + 1) % MAX_SYNC_FRAME;
+}
+
+vk_command_list* vk_context::get_current_command_list()
+{
+	return m_frames[m_current_frame].cmd;
 }
 
 uint32_t vk_context::current_frame() const
@@ -155,9 +168,14 @@ VkSurfaceKHR vk_context::surface() const
 	return m_surface->handle();
 }
 
-VkDevice vk_context::device() const
+VkDevice vk_context::get_logical_device_handle() const
 {
-	return m_device->handle();
+	return m_logical_device->handle();
+}
+
+VkPhysicalDevice vk_context::get_physical_device() const
+{
+	return m_logical_device->get_gpu()->handle;
 }
 
 VkSwapchainKHR vk_context::swapchain() const
@@ -170,30 +188,40 @@ VkFence vk_context::get_current_fence()
 	return m_sync->get_inflight_fence(m_current_frame);
 }
 
+vk_render_target* vk_context::get_current_swapchain_render_target()
+{
+	return m_swapchain->get_render_target(m_swapchain_image_frame);
+}
+
+vk_device* vk_context::get_graphics_device() const
+{
+	return m_device;
+}
+
 VkQueue vk_context::graphics_queue() const
 {
-	return m_device->graphics_queue();
+	return m_logical_device->graphics_queue();
 }
 
 VkQueue vk_context::transfer_queue() const
 {
-	return m_device->transfer_queue();
+	return m_logical_device->transfer_queue();
 }
 
 uint32_t vk_context::graphics_queue_index() const
 {
-	return m_device->graphics_queue_family_index();
+	return m_logical_device->graphics_queue_family_index();
 }
 
 uint32_t vk_context::transfer_queue_index() const
 {
-	return m_device->transfer_queue_family_index();
+	return m_logical_device->transfer_queue_family_index();
 }
 
 void vk_context::create_command_objects()
 {
-	VkDevice device                = m_device->handle();
-	uint32_t graphics_queue_family = m_device->graphics_queue_family_index();
+	VkDevice device                = m_logical_device->handle();
+	uint32_t graphics_queue_family = m_logical_device->graphics_queue_family_index();
 
 	for(uint32_t i = 0; i < MAX_SYNC_FRAME; i++) {
 		// Command Pool 생성
@@ -202,106 +230,24 @@ void vk_context::create_command_objects()
 		pool_info.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		pool_info.queueFamilyIndex = graphics_queue_family;
 
-		VK(vkCreateCommandPool(device, &pool_info, nullptr, &frames[i].m_cmd_pool));
+		VK(vkCreateCommandPool(device, &pool_info, nullptr, &m_frames[i].cmd_pool));
 
-		// Command Buffer 할당
-		VkCommandBufferAllocateInfo alloc_info{};
-		alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		alloc_info.commandPool        = frames[i].m_cmd_pool;
-		alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		alloc_info.commandBufferCount = 1;
-
-		VK(vkAllocateCommandBuffers(device, &alloc_info, &frames[i].m_cmd));
+		m_frames[i].cmd = debug_new vk_command_list(m_logical_device->handle(), m_frames[i].cmd_pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 	}
 }
 
 void vk_context::destroy_command_objects()
 {
-	VkDevice device = m_device->handle();
+	VkDevice device = m_logical_device->handle();
 
 	for(uint32_t i = 0; i < MAX_SYNC_FRAME; i++) {
-		if(frames[i].m_cmd != VK_NULL_HANDLE) {
-			vkFreeCommandBuffers(device, frames[i].m_cmd_pool, 1, &frames[i].m_cmd);
-			frames[i].m_cmd = VK_NULL_HANDLE;
-		}
+		safe_delete(m_frames[i].cmd);
 
-		if(frames[i].m_cmd_pool != VK_NULL_HANDLE) {
-			vkDestroyCommandPool(device, frames[i].m_cmd_pool, nullptr);
-			frames[i].m_cmd_pool = VK_NULL_HANDLE;
+		if(m_frames[i].cmd_pool != VK_NULL_HANDLE) {
+			vkDestroyCommandPool(device, m_frames[i].cmd_pool, nullptr);
+			m_frames[i].cmd_pool = VK_NULL_HANDLE;
 		}
 	}
-}
-
-VkCommandBufferBeginInfo vk_context::command_buffer_begin_info(VkCommandBufferUsageFlags flags)
-{
-	VkCommandBufferBeginInfo info{};
-	info.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	info.pNext            = nullptr;
-	info.flags            = flags;        // 한 번만 사용할 CommandBuffer라면
-	info.pInheritanceInfo = nullptr;        // secondary command buffer가 아니므로 nullptr
-	return info;
-}
-
-void vk_context::transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout oldLayout,
-                                  VkImageLayout newLayout)
-{
-	VkImageMemoryBarrier barrier{};
-	barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.pNext               = nullptr;
-	barrier.oldLayout           = oldLayout;
-	barrier.newLayout           = newLayout;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.image               = image;
-
-	// subresource range 설정
-	barrier.subresourceRange.baseMipLevel   = 0;
-	barrier.subresourceRange.levelCount     = 1;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount     = 1;
-
-	if(newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-	}
-	else {
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	}
-
-	// 접근 마스크 (Access Masks)
-	VkPipelineStageFlags srcStage = 0;
-	VkPipelineStageFlags dstStage = 0;
-
-	switch(oldLayout) {
-		case VK_IMAGE_LAYOUT_UNDEFINED:
-			barrier.srcAccessMask = 0;
-			srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			srcStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			break;
-		default:
-			barrier.srcAccessMask = 0;
-			srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			break;
-	}
-
-	switch(newLayout) {
-		case VK_IMAGE_LAYOUT_GENERAL:
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-			dstStage              = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			break;
-		default:
-			barrier.dstAccessMask = 0;
-			dstStage              = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			break;
-	}
-
-	vkCmdPipelineBarrier(cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 }        // namespace juce

@@ -39,6 +39,9 @@ typedef struct VkDeviceMemory_T* VkDeviceMemory;
 typedef struct VkDevice_T*       VkDevice;
 typedef uint64_t                 VkDeviceSize;
 
+// VMA
+typedef struct VmaAllocator_T*  VmaAllocator;
+typedef struct VmaAllocation_T* VmaAllocation;
 
 // Juce Forward Declare
 namespace juce
@@ -53,54 +56,76 @@ class scene;
 class vk_context;
 class vk_instance;
 class vk_surface;
-class vk_device;
+class vk_logical_device;
 class vk_swapchain;
 class vk_sync;
+class vk_command_list;
+class vk_device;
 
 // struct
 struct vk_buffer;
+struct vk_buffer_ext;
 struct vk_render_target;
 
 // experimental
 class vk_context_ext;
 
 // engine enum
-enum class render_target_type { color,
-	                            depth,
-	                            stencil,
-	                            depth_stencil };
+enum class render_target_type {
+	color,
+	depth,
+	stencil,
+	depth_stencil
+};
 
-enum class load_operator { load,
-	                       clear,
-	                       discard };
+enum class load_operator {
+	load,
+	clear,
+	discard
+};
 
-enum class store_operator { store,
-	                        discard,
-	                        no_access };
+enum class store_operator {
+	store,
+	discard,
+	no_access
+};
 
-enum class buffer_type { vertex,
-	                     index,
-	                     uniform };
+enum class resource_layout {
+	undefined,
+	render_target,
+	present
+};
+
+enum class buffer_type {
+	vertex,
+	index,
+	uniform
+};
 
 struct buffer_create_info
 {
 	buffer_type type;
-	const void* p_data;
-	uint32_t    cb_size;
+	const void* data;
+	uint32_t    size;
 };
 
-struct clear_value {
+struct clear_value
+{
 	float color[4];
 };
 
-// owned: vk_device에서 생성된 자원일 때
+// owned: vk_logical_device에서 생성된 자원일 때
 // imported: pure heap에서 만들었을 때
 enum class alloc_scope {
-	owned, imported
+	owned,
+	imported
 };
 
 enum class shader_stage {
-	vertex, pixel, geometry, hull
+	vertex,
+	pixel,
+	geometry,
+	hull
 };
 
 }        // namespace juce

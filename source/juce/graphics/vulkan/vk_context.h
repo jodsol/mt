@@ -21,48 +21,46 @@ public:
 
 	struct frame_object
 	{
-		VkCommandBuffer m_cmd{VK_NULL_HANDLE};
-		VkCommandPool   m_cmd_pool{VK_NULL_HANDLE};
+		VkCommandPool    cmd_pool{VK_NULL_HANDLE};
+		vk_command_list* cmd = nullptr;
 	};
 
-	frame_object frames[MAX_SYNC_FRAME];
+	frame_object     m_frames[MAX_SYNC_FRAME];
+	vk_command_list* get_current_command_list();
 
 	// get indexed frame
 	uint32_t current_frame() const override;
 	uint32_t swapchain_frame() const override;
 
 	// get raw vulkan handles
-	VkInstance     instance() const;
-	VkSurfaceKHR   surface() const;
-	VkDevice       device() const;
-	VkSwapchainKHR swapchain() const;
-	VkQueue        graphics_queue() const;
-	VkQueue        transfer_queue() const;
-	uint32_t       graphics_queue_index() const;
-	uint32_t       transfer_queue_index() const;
+	VkInstance       instance() const;
+	VkSurfaceKHR     surface() const;
+	VkDevice         get_logical_device_handle() const;
+	VkPhysicalDevice get_physical_device() const;
+	VkSwapchainKHR   swapchain() const;
+	VkQueue          graphics_queue() const;
+	VkQueue          transfer_queue() const;
+	uint32_t         graphics_queue_index() const;
+	uint32_t         transfer_queue_index() const;
 
-	VkFence get_current_fence();
+	VkFence           get_current_fence();
+	vk_render_target* get_current_swapchain_render_target();
 
-	// ext class 에서 private 맴버도 허용
-	friend class vk_context_ext;
+	vk_device* get_graphics_device() const;
 
 	// private:
 	uint32_t m_frame_number          = 0;
 	uint32_t m_current_frame         = 0;
 	uint32_t m_swapchain_image_frame = 0;
 
-	// 래퍼 class 들을 동적으로 만들 필요가 있나 싶음
-	// init 을 생성에 쓰고 release 함수를 해제하는거 검토
-	vk_instance*  m_instance{nullptr};
-	vk_surface*   m_surface{nullptr};
-	vk_device*    m_device{nullptr};
-	vk_swapchain* m_swapchain{nullptr};
-	vk_sync*      m_sync{nullptr};
+	vk_instance*       m_instance{nullptr};
+	vk_surface*        m_surface{nullptr};
+	vk_logical_device* m_logical_device{nullptr};
+	vk_swapchain*      m_swapchain{nullptr};
+	vk_sync*           m_sync{nullptr};
+	vk_device*         m_device;
 
-	void                     create_command_objects();
-	void                     destroy_command_objects();
-	VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags);
-	void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout,
-	                      VkImageLayout newLayout);
+	void create_command_objects();
+	void destroy_command_objects();
 };
 }        // namespace juce

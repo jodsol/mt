@@ -35,11 +35,17 @@ public:
 		return m_cy;
 	}
 
+	void set_size(uint32_t cx, uint32_t cy)
+	{
+		m_cx = cx;
+		m_cy = cy;
+	}
+
 private:
 #ifdef _WIN32
 	platform_handle m_handle{nullptr};
 #endif
-	uint32 m_cx;
-	uint32 m_cy;
+	uint32_t m_cx;
+	uint32_t m_cy;
 };
 }        // namespace juce

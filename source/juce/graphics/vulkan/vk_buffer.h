@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <memory>
 
-// struct VmaAllocation_T;
-typedef struct VmaAllocation_T* VmaAllocation;
-
 namespace juce
 {
 
@@ -26,10 +23,11 @@ struct vk_buffer
 struct vk_buffer_ext
 {
 	VkBuffer      handle{};
-	VmaAllocation allocation;
-	VkDevice      device;
+	VmaAllocation allocation{};
+	VmaAllocator  allocator{};
 
-	static vk_buffer_ext* create_buffer_ext(VkDevice device, VkBuffer buf, VmaAllocation alloc);
+	~vk_buffer_ext();
+	void release();
 };
 
 }        // namespace juce

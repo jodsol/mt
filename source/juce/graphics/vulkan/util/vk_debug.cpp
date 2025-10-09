@@ -1,6 +1,6 @@
 #include "vk_debug.h"
 #include "../vk_instance.h"
-#include "../vk_device.h"
+#include "../vk_logical_device.h"
 
 namespace juce
 {
@@ -8,7 +8,7 @@ void vk_debug::print_instance(vk_instance* instance)
 {
 }
 
-void vk_debug::print_logical_device_info(vk_device* device)
+void vk_debug::print_logical_device_info(vk_logical_device* device)
 {
 	auto gpu            = device->get_gpu()->handle;
 	auto graphics_queue = device->graphics_queue();
@@ -19,13 +19,13 @@ void vk_debug::print_logical_device_info(vk_device* device)
 	auto yn = [](VkBool32 b) { return b ? "YES" : "NO"; };
 
 	log_debug("+--------------------------- LOGICAL DEVICE INFO ----------------------------+");
-	log_debug("| %-22s | %-49p |", "VkDevice handle", (void*) device->handle());
+	log_debug("| %-22s | %-49p |", "VkDevice handle", (void*)device->handle());
 	log_debug("+-------------------------+--------------------------------------------------+");
 
-	log_debug("| %-22s | %-49p |", "Graphics Queue", (void*) graphics_queue);
-	log_debug("| %-22s | %-49p |", "Present Queue ", present_queue ? (void*) present_queue : "(none)");
-	log_debug("| %-22s | %-49p |", "Compute Queue ", compute_queue ? (void*) compute_queue : "(none)");
-	log_debug("| %-22s | %-49p |", "Transfer Queue", transfer_queue ? (void*) transfer_queue : "(none)");
+	log_debug("| %-22s | %-49p |", "Graphics Queue", (void*)graphics_queue);
+	log_debug("| %-22s | %-49p |", "Present Queue ", present_queue ? (void*)present_queue : "(none)");
+	log_debug("| %-22s | %-49p |", "Compute Queue ", compute_queue ? (void*)compute_queue : "(none)");
+	log_debug("| %-22s | %-49p |", "Transfer Queue", transfer_queue ? (void*)transfer_queue : "(none)");
 	log_debug("+-------------------------+--------------------------------------------------+");
 
 	// Vulkan features
@@ -50,7 +50,7 @@ void vk_debug::print_logical_device_info(vk_device* device)
 	log_debug("+----------------------------------------------------------------------------+");
 }
 
-void vk_debug::print_queue_families(vk_device* device)
+void vk_debug::print_queue_families(vk_logical_device* device)
 {
 	auto gpu     = device->get_gpu()->handle;
 	auto surface = device->surface();
@@ -65,7 +65,7 @@ void vk_debug::print_queue_families(vk_device* device)
 	log_debug("| Family# | Flags (queueFlags)                                 | queueCount | Present(surf)  |");
 	log_debug("+---------+----------------------------------------------------+------------+----------------+");
 
-	for (uint32_t i = 0; i < count; ++i) {
+	for(uint32_t i = 0; i < count; ++i) {
 		auto f = props[i].queueFlags;
 		bool g = (f & VK_QUEUE_GRAPHICS_BIT) != 0;
 		bool c = (f & VK_QUEUE_COMPUTE_BIT) != 0;
@@ -73,27 +73,27 @@ void vk_debug::print_queue_families(vk_device* device)
 		bool s = (f & VK_QUEUE_SPARSE_BINDING_BIT) != 0;
 #ifdef VK_ENABLE_BETA_EXTENSIONS
 		bool v = (f & VK_QUEUE_VIDEO_DECODE_BIT_KHR) != 0 ||
-		         (f & VK_QUEUE_VIDEO_ENCODE_BIT_KHR) != 0;
+		    (f & VK_QUEUE_VIDEO_ENCODE_BIT_KHR) != 0;
 #endif
 
 		std::string fs;
-		if (g)
+		if(g)
 			fs += "GRAPHICS | ";
-		if (c)
+		if(c)
 			fs += "COMPUTE  | ";
-		if (t)
+		if(t)
 			fs += "TRANSFER | ";
-		if (s)
+		if(s)
 			fs += "SPARSE   | ";
 #ifdef VK_ENABLE_BETA_EXTENSIONS
-		if (v)
+		if(v)
 			fs += "VIDEO | ";
 #endif
-		if (!fs.empty())
+		if(!fs.empty())
 			fs.resize(fs.size() - 3);        // 마지막 " | " 제거
 
 		VkBool32 present = VK_FALSE;
-		if (surface != VK_NULL_HANDLE) {
+		if(surface != VK_NULL_HANDLE) {
 			vkGetPhysicalDeviceSurfaceSupportKHR(gpu, i, surface, &present);
 		}
 
@@ -109,7 +109,7 @@ void vk_debug::print_queue_families(vk_device* device)
 
 static inline const char* device_type_str(VkPhysicalDeviceType type)
 {
-	switch (type) {
+	switch(type) {
 		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
 			return "Discrete GPU";
 		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
@@ -123,11 +123,11 @@ static inline const char* device_type_str(VkPhysicalDeviceType type)
 	}
 }
 
-void vk_debug::print_physical_device(const vk_device* device)
+void vk_debug::print_physical_device(const vk_logical_device* device)
 {
 	auto               gpu = *device->get_gpu();
 	unsigned long long vramMB =
-	    static_cast<unsigned long long>(vk_device::get_gpu_available_vram_byte(gpu.memory_props) / (1024ull * 1024ull));
+	    static_cast<unsigned long long>(vk_logical_device::get_gpu_available_vram_byte(gpu.memory_props) / (1024ull * 1024ull));
 
 	char apiVerStr[32];
 	snprintf(apiVerStr, sizeof(apiVerStr), "%u.%u.%u",

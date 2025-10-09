@@ -1,12 +1,12 @@
 #include "vk_swapchain.h"
 #include <algorithm>
-#include "vk_device.h"
-#include <juce/graphics/vulkan/experimental/vk_render_target.h>
+#include "vk_logical_device.h"
+#include "vk_render_target.h"
 
 namespace juce
 {
 
-vk_swapchain::vk_swapchain(const vk_device* device, uint32_t cx, uint32_t cy) :
+vk_swapchain::vk_swapchain(const vk_logical_device* device, uint32_t cx, uint32_t cy) :
     m_physical_device(device->get_gpu()->handle),
     m_device(device->handle()),
     m_surface(device->surface())
@@ -100,6 +100,7 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
 
 		render_target->load_op  = load_operator::clear;
 		render_target->store_op = store_operator::store;
+		render_target->scope    = alloc_scope::imported;
 
 		m_render_targets[i] = render_target;
 	}
@@ -107,9 +108,9 @@ bool vk_swapchain::create_swapchain(uint32_t width, uint32_t height)
 	return true;
 }
 
-void vk_swapchain::recreate_swapchain(uint32_t cur_width, uint32_t cur_height)
+void vk_swapchain::recreate_swapchain(uint32_t cx, uint32_t cy)
 {
-	if(cur_width == 0 || cur_height == 0) {
+	if(cx == 0 || cy == 0) {
 		return;
 	}
 
@@ -117,7 +118,7 @@ void vk_swapchain::recreate_swapchain(uint32_t cur_width, uint32_t cur_height)
 
 	destroy_swapchain();
 
-	create_swapchain(cur_width, cur_height);
+	create_swapchain(cx, cy);
 }
 
 VkImage vk_swapchain::get_image(uint32_t index)
@@ -129,6 +130,16 @@ VkImageView vk_swapchain::get_image_view(uint32_t index)
 {
 	return m_render_targets[index]->view;
 }
+
+vk_render_target* vk_swapchain::get_render_target(uint32_t index)
+{
+	return m_render_targets[index];
+}
+
+// vk_render_target* vk_swapchain::get_render_target(uint32_t index)
+// {
+// 	return m_render_targets[index];
+// }
 
 VkImageView vk_swapchain::create_image_view(VkImage image, VkFormat format)
 {
@@ -181,10 +192,9 @@ SwapChainSupportDetails vk_swapchain::query_swapchain_support(VkPhysicalDevice p
 bool vk_swapchain::destroy_swapchain()
 {
 	for(uint32_t i = 0; i < m_render_targets.size(); i++) {
-		m_render_targets.clear();
 		safe_delete(m_render_targets[i]);
 	}
-
+	m_render_targets.clear();
 	// ImageView 제거
 	if(m_handle != VK_NULL_HANDLE) {
 		vkDestroySwapchainKHR(m_device, m_handle, nullptr);
