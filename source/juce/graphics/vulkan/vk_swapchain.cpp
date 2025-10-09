@@ -130,10 +130,10 @@ VkImageView vk_swapchain::get_image_view(uint32_t index)
 	return m_render_targets[index]->view;
 }
 
-// vk_render_target* vk_swapchain::get_render_target(uint32_t index)
-// {
-// 	return m_render_targets[index];
-// }
+vk_render_target* vk_swapchain::get_render_target(uint32_t index)
+{
+	return m_render_targets[index];
+}
 
 VkImageView vk_swapchain::create_image_view(VkImage image, VkFormat format)
 {
@@ -186,9 +186,10 @@ SwapChainSupportDetails vk_swapchain::query_swapchain_support(VkPhysicalDevice p
 bool vk_swapchain::destroy_swapchain()
 {
 	for(uint32_t i = 0; i < m_render_targets.size(); i++) {
-		m_render_targets.clear();
 		safe_delete(m_render_targets[i]);
 	}
+
+	m_render_targets.clear();
 
 	// ImageView 제거
 	if(m_handle != VK_NULL_HANDLE) {

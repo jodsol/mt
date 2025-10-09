@@ -2,7 +2,6 @@
 #include "../vk_device.h"
 #include "../vk_sync.h"
 #include "../vk_swapchain.h"
-#include "vk_resouce_cache.h"
 
 namespace juce
 {

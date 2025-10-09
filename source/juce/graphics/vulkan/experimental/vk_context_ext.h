@@ -21,7 +21,8 @@ public:
 
 	vk_command_list m_command_lists[MAX_SYNC_FRAME]{};
 
-	vk_render_target m_render_target[8];
+	// 포인터가 아니여서 지워짐
+	// vk_render_target m_render_target[8];
 
 	VkCommandBuffer cmd;
 	vk_command_list m_transfer_cmd;

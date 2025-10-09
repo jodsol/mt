@@ -12,7 +12,7 @@ struct vk_render_target
 	render_target_type type;
 	VkDevice		   device;
 	VkImage            image;
-	VkDeviceMemory     mem;
+	VkDeviceMemory     mem{nullptr};
 	VkImageView        view;
 	VkFormat           format;
 	VkExtent2D         extend{};
