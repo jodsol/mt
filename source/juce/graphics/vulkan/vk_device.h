@@ -3,6 +3,7 @@
 #include <juce/core/typedef.h>
 #include "vk_handle.h"
 #include "vk_config.h"
+#include "vk_shader.h"
 #include <vector>
 #include <optional>
 
@@ -45,6 +46,9 @@ public:
 	uint32_t present_queue_family_index() const;
 	uint32_t compute_queue_family_index() const;
 	uint32_t transfer_queue_family_index() const;
+
+	void create_spv_from_file(const shader_create_info* info, vk_shader **pp_shader);
+
 
 	const VkQueue graphics_queue() const;
 

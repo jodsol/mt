@@ -59,6 +59,7 @@ class vk_sync;
 
 // struct
 struct vk_buffer;
+struct vk_shader;
 struct vk_render_target;
 
 // experimental
@@ -89,6 +90,7 @@ struct buffer_create_info
 	uint32_t    cb_size;
 };
 
+
 struct clear_value {
 	float color[4];
 };
@@ -100,7 +102,15 @@ enum class alloc_scope {
 };
 
 enum class shader_stage {
-	vertex, pixel, geometry, hull
+	vertex, pixel, geometry, hull // hull = terssellation
+};
+
+struct shader_create_info {
+  shader_stage stage;
+  const char* filename;
+  const char* entry;
+  // const char* include;
+  // const char* defines;
 };
 
 }        // namespace juce

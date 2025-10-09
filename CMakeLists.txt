@@ -10,6 +10,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(juce_bin_dir "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 set(juce_inc_dir "${CMAKE_CURRENT_SOURCE_DIR}/source")
+set(juce_data_dir "${CMAKE_SOURCE_DIR}/data")
+
+configure_file(source/juce/core/config.h.in source/juce/core/config.h)
 
 # engine
 add_subdirectory(source/juce "${CMAKE_CURRENT_BINARY_DIR}/juce")

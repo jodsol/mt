@@ -1,6 +1,8 @@
 #include "render_scene.h"
 #include <juce/graphics/vulkan/experimental/vk_context_ext.h>
+#include <juce/graphics/vulkan/vk_device.h>
 #include <juce/graphics/vulkan/vk_buffer.h>
+#include <juce/graphics/vulkan/vk_shader.h>
 
 namespace juce
 {
@@ -14,6 +16,22 @@ void render_scene::init()
 	info.type    = buffer_type::vertex;
 
 	vkDeviceWaitIdle(m_context->device());
+
+	shader_create_info vs{};
+	vs.stage    = shader_stage::vertex;
+	vs.filename = "shaders/simple.vert";
+	vs.entry    = "main";
+
+	shader_create_info fs{};
+	fs.stage    = shader_stage::pixel;
+	fs.filename = "shaders/simple.frag";
+	fs.entry    = "main";
+
+	vk_shader* vert_shader = nullptr;
+	vk_shader* frag_shader = nullptr;
+
+	m_context->m_device->create_spv_from_file(&vs, &vert_shader);
+	m_context->m_device->create_spv_from_file(&fs, &frag_shader);
 
 	int a = 0;
 }

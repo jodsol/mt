@@ -1,4 +1,6 @@
 #include "vk_device.h"
+#include <filesystem>
+#include <fstream>
 
 namespace juce
 {
@@ -30,7 +32,7 @@ queue_indices find_queue_indices(
 {
 	queue_indices queue_indices{};
 
-	for(uint32_t i = 0; i < (uint32_t) queue_props.size(); ++i) {
+	for(uint32_t i = 0; i < (uint32_t)queue_props.size(); ++i) {
 		VkQueueFlags flag = queue_props[i].queueFlags;
 
 		if((flag & VK_QUEUE_GRAPHICS_BIT) && !queue_indices.graphics) {
@@ -353,6 +355,93 @@ static inline const char* device_type_str(VkPhysicalDeviceType type)
 		default:
 			return "Other/Unknown";
 	}
+}
+
+void vk_device::create_spv_from_file(const shader_create_info* info, vk_shader** pp_shader)
+{
+	if(!info || !info->filename) {
+		std::cerr << "[vk_device] ❌ Invalid shader_create_info (nullptr)" << std::endl;
+		return;
+	}
+
+	// 데이터 경로 설정
+	std::filesystem::path current_dir = std::filesystem::current_path();
+	std::filesystem::path shader_dir  = current_dir / "data" / "shaders";
+	std::filesystem::path shader_path = shader_dir / info->filename;
+
+	if(!std::filesystem::exists(shader_path)) {
+		std::cerr << "[vk_device] ❌ Shader file not found: " << shader_path << std::endl;
+		return;
+	}
+
+	// shader stage 확장자
+	std::string stage_ext;
+	switch(info->stage) {
+		case shader_stage::vertex: stage_ext = "vert"; break;
+		case shader_stage::pixel: stage_ext = "frag"; break;
+		case shader_stage::geometry: stage_ext = "geom"; break;
+		case shader_stage::hull: stage_ext = "tesc"; break;
+		default: stage_ext = "spv"; break;
+	}
+
+	// 출력 파일 (.spv)
+	std::filesystem::path spv_path = shader_path;
+	spv_path.replace_extension(stage_ext + ".spv");
+
+#ifdef _WIN32
+	const char* validator = "glslangValidator.exe";
+#else
+	const char* validator = "glslangValidator";
+#endif
+
+	// glslangValidator 실행 명령
+	std::string cmd = std::string(validator) + " -V \"" + shader_path.string() + "\" -o \"" + spv_path.string() + "\"";
+
+	if(info->entry && std::strlen(info->entry) > 0)
+		cmd += " -e " + std::string(info->entry);
+	if(info->include && std::strlen(info->include) > 0)
+		cmd += " -I \"" + std::string(info->include) + "\"";
+	if(info->defines && std::strlen(info->defines) > 0)
+		cmd += " -D " + std::string(info->defines);
+
+	std::cout << "[vk_device] 🔧 Compiling shader: " << cmd << std::endl;
+
+	// 실제 실행
+	int result = std::system(cmd.c_str());
+	if(result != 0) {
+		std::cerr << "[vk_device] ❌ glslangValidator failed (" << result << ")" << std::endl;
+		return;
+	}
+
+	// SPIR-V 파일 존재 확인
+	if(!std::filesystem::exists(spv_path)) {
+		std::cerr << "[vk_device] ❌ SPIR-V file not found after compilation: " << spv_path << std::endl;
+		return;
+	}
+
+	// SPIR-V 파일을 읽어서 vector<uint32_t>로 로드
+	std::ifstream file(spv_path, std::ios::binary | std::ios::ate);
+	if(!file) {
+		std::cerr << "[vk_device] ❌ Failed to open SPIR-V: " << spv_path << std::endl;
+		return;
+	}
+
+	std::streamsize size = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	std::vector<uint32_t> spirv(size / sizeof(uint32_t));
+	if(!file.read(reinterpret_cast<char*>(spirv.data()), size)) {
+		std::cerr << "[vk_device] ❌ Failed to read SPIR-V file data" << std::endl;
+		return;
+	}
+
+	file.close();
+
+	std::cout << "[vk_device] ✅ Loaded SPIR-V (" << size << " bytes): " << spv_path << std::endl;
+
+	// vk_shader 객체 생성
+	*pp_shader = new vk_shader(m_handle, spirv, static_cast<VkShaderStageFlagBits>(info->stage));
+	std::cout << "[vk_device] ✅ Shader module created successfully." << std::endl;
 }
 
 }        // namespace juce
